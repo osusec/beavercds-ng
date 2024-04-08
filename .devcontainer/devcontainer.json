@@ -1,0 +1,23 @@
+{
+  "name": "Go",
+  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+  "image": "mcr.microsoft.com/devcontainers/go:1-1.22",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.go",
+        "davidanson.vscode-markdownlint",
+        "shardulm94.trailing-spaces",
+        "IBM.output-colorizer"
+      ],
+      "settings": {
+        "go.useLanguageServer": true
+      },
+    }
+  },
+  "postCreateCommand": "go mod download",
+
+  // podman
+	"runArgs": ["--userns=keep-id"],
+	"containerUser": "vscode",
+}
