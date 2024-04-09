@@ -17,11 +17,11 @@
 
         # packages.beavercds-ng = pkgs.buildGoModule {
         #   pname = "beavercds-ng";
-        #   version = "0.1.0"; # or something
+        #   version = "0.1.0";  # or something
 
         #   src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
-        #   vendorHash = pkgs.lib.fakeHash;
+        #   vendorHash = "";  # to be determined on each update
         # };
       };
     };
