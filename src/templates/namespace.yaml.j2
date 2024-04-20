@@ -1,0 +1,10 @@
+{% set chal = whatever -%}
+{% set slug = chal.name | slugify -%}
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rcds-{{ slug }}
+  annotations:
+    app.kubernetes.io/managed-by: rcds

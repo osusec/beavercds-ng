@@ -1,0 +1,47 @@
+{% set chal = whatever -%}
+{% set pod = whatever -%}
+{% set slug = chal.name | slugify -%}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "rcds-{{ slug }}-{{ pod.name }}"
+  namespace: "rcds-{{ slug }}"
+  annotations:
+    rctf/challenge: "{{ chal.name }}"
+    rctf/category: "{{ chal.category }}"
+    rctf/description: "{{ chal.description }}"
+    rctf/flag: "{{ chal.flag }}"
+    rctf/points: "{{ chal.points }}"
+    rctf/files: "{{ chal.points }}"
+    app.kubernetes.io/managed-by: rcds
+spec:
+  selector:
+    matchLabels:
+      rctf/part-of: "{{ slug }}-{{ pod.name }}"
+  replicas: {{ pod.replicas }}
+  template:
+    metadata:
+      labels:
+        rctf/part-of: "{{ slug }}-{{ pod.name }}"
+    spec:
+      containers:
+        - name: "{{ pod.name }}"
+          image: "{{ pod.image }}"
+          ports:
+            {% for p in pod.ports -%}
+            - containerPort: {{ p.internal }}
+            {%- endfor %}
+          {% if pod.env -%}
+          env:
+            {% for k, v in pod.env -%}
+            - { name: "{{ k }}", value: "{{ v }}" }
+            {%- endfor %}
+          {%- endif %}
+          resources:
+            requests: {{ pod.resources | json_encode() | safe }}
+            limits: {{ pod.resources | json_encode() | safe }}
+
+      # don't give chal pods k8s api tokens
+      automountServiceAccountToken: false

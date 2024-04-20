@@ -1,0 +1,47 @@
+{% set chal = whatever -%}
+{% set pod = current from chal -%}
+{% set rcds = global rcds yaml -%}
+{% set slug = chal.name | slugify -%}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: "rcds-{{ slug }}-{{ pod.name }}"
+  namespace: "rcds-{{ slug }}"
+  annotations:
+    app.kubernetes.io/managed-by: rcds
+spec:
+  selector:
+    rctf/part-of: "{{ slug }}-{{ pod.name }}"
+  ports:
+    # host service at same port as container
+    {% for p in pod.ports -%}
+    - port: {{ p.internal }}
+      targetPort: {{ p.internal }}
+    {%- endfor %}
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "rcds-{{ slug }}-{{ pod.name }}"
+  namespace: "rcds-{{ slug }}"
+  annotations:
+    app.kubernetes.io/managed-by: rcds
+spec:
+  ingressClassName: beaverctf-nginx
+  rules:
+  {% for p in pod.ports | filter(attribute="expose.http") -%}
+    - host: "{{ p.expose.http }}.{{ rcds.domain }}"
+      http:
+        paths:
+        - pathType: Prefix
+          path: "/"
+          backend:
+            service:
+              name: "rcds-{{ slug }}-{{ pod.name }}"
+              port:
+                # find first pod http port
+                number: {{ p.internal }}
+  {%- endfor %}
