@@ -17,14 +17,13 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# Go workspace file
-go.work
-
-# GOPATH contents, as set in Nix devshell
-.go/
-
 # direnv stuff
 .envrc
 .direnv/
 
 out/
+
+
+# Added by cargo
+
+/target
