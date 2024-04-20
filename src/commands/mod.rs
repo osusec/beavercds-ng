@@ -25,7 +25,7 @@ pub enum Commands {
 
     /// Deploy enabled challenges to cluster, updating any backing resources as necessary.
     ///
-    /// Also builds and pushes images to registry, unles --no-build is specified.
+    /// Also builds and pushes images to registry, unless --no-build is specified.
     Deploy {
         #[arg(long, value_name = "PROFILE", help = "deployment profile")]
         profile: String,
