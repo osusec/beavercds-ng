@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rcds-foo
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: rcds-foo
+  name: rcds-foo-pod
+  annotations:
+    rctf/category: misc
+    rctf/challenge: foo
+    rctf/description: |-
+      whatever bullshit
+    rctf/flag: dam{example}
+    rctf/points: '{from config}'
+    rctf/files: ""
+spec:
+  selector:
+    matchLabels:
+      rctf/part-of: foo-pod
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        rctf/part-of: foo-pod
+    spec:
+      containers:
+        - name: pod
+          image: cjimti/go-echo
+          env:
+            - name: TCP_PORT
+              value: "1234"
+          ports:
+            - containerPort: 1234
+          resources:
+            requests: { cpu: 10m, memory: 200Mi }
+            limits: { cpu: 10m, memory: 200Mi }
+
+      automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: rcds-foo
+  name: rcds-foo-pod
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: foo.beaverctf.detjens.dev
+spec:
+  type: LoadBalancer
+  selector:
+    rctf/part-of: foo-pod
+  ports:
+    - port: 13337
+      targetPort: 1234
+      protocol: TCP

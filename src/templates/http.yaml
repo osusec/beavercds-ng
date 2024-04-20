@@ -1,0 +1,73 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rcds-bar
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: rcds-bar
+  name: rcds-bar-pod
+  annotations:
+    rctf/category: web
+    rctf/challenge: bar
+    rctf/description: |-
+      whatever bullshit
+    rctf/flag: dam{example}
+    rctf/points: '{from config}'
+    rctf/files: ""
+spec:
+  selector:
+    matchLabels:
+      rctf/part-of: bar-pod
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        rctf/part-of: bar-pod
+    spec:
+      containers:
+        - name: pod
+          image: nginx
+          ports:
+            - containerPort: 80
+          resources:
+            requests: { cpu: 10m, memory: 200Mi }
+            limits: { cpu: 10m, memory: 200Mi }
+
+      automountServiceAccountToken: false
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: rcds-bar
+  name: rcds-bar-pod
+spec:
+  selector:
+    rctf/part-of: bar-pod
+  ports:
+    - port: 80
+      targetPort: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  namespace: rcds-bar
+  name: rcds-bar
+spec:
+  ingressClassName: beaverctf-nginx
+  rules:
+  - host: bar.beaverctf.detjens.dev
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: rcds-bar-pod
+            port:
+              number: 80
