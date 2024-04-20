@@ -1,28 +1,60 @@
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  inputs.flake-parts.url = "github:hercules-ci/flake-parts";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
-  outputs = inputs@{flake-parts, ... }:
+  outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = ["x86_64-linux"];  # we can probably add more eventually?
-      perSystem = {pkgs, ...}: {
-        devShells.default = pkgs.mkShell {
-          packages = [pkgs.go];
-
-          shellHook = ''
-            # install packages & stuff to current directory
-            export GOPATH=$(pwd)/.go
-          '';
+      systems = ["x86_64-linux"]; # we can probably add more eventually?
+      perSystem = {
+        self',
+        pkgs,
+        system,
+        ...
+      }: {
+        # apply fenix overlay
+        _module.args.pkgs = import inputs.nixpkgs {
+          inherit system;
+          overlays = [
+            inputs.fenix.overlays.default
+          ];
         };
 
-        # packages.beavercds-ng = pkgs.buildGoModule {
-        #   pname = "beavercds-ng";
-        #   version = "0.1.0";  # or something
+        # shell with just rust & stuff for now
+        devShells.default = let
+          inherit (pkgs) mkShell fenix;
+          rust = fenix.stable.withComponents [
+            "cargo"
+            "clippy"
+            "rust-src"
+            "rustc"
+            "rustfmt"
+            "rust-analyzer"
+          ];
+        in
+          mkShell {
+            packages = [rust];
+          };
 
-        #   src = pkgs.nix-gitignore.gitignoreSource [] ./.;
+        packages.beavercds-ng = pkgs.rustPlatform.buildRustPackage {
+          pname = "beavercds-ng";
+          version = "0.1.0";
 
-        #   vendorHash = "";  # to be determined on each update
-        # };
+          src = pkgs.nix-gitignore.gitignoreSource [] ./.;
+
+          # probably don't fill in unless testing
+          cargoHash = "";
+        };
+
+        # yay checks :)
+        checks.beavercds-ng = self'.packages.beavercds-ng;
+
+        formatter = pkgs.alejandra;
       };
     };
 }
