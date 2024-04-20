@@ -26,3 +26,5 @@ go.work
 # direnv stuff
 .envrc
 .direnv/
+
+out/
