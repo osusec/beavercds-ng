@@ -1,25 +1,29 @@
 use clap::{Parser, Subcommand};
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 /// Deployment manager for rCTF/beaverCTF challenges deployed on Kubernetes.
 pub struct Cli {
-    #[arg(short, global = true, help = "Show verbose output")]
+    #[arg(short, long, global = true, help = "Show verbose output")]
     verbose: bool,
 
     #[command(subcommand)]
-    command: Commands,
+    pub command: Commands,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 pub enum Commands {
     /// Build all challenge container images, optionally pushing them to the configured registry.
     ///
     /// Images are tagged as <registry>/<chal>-<container>:<profile>.
     Build {
-        #[arg(long, value_name = "PROFILE", help = "deployment profile")]
+        #[arg(short, long, value_name = "PROFILE", help = "deployment profile")]
         profile: String,
 
-        #[arg(long, help = "Whether to push container images to registry")]
+        #[arg(
+            long,
+            help = "Whether to push container images to registry (default: true)",
+            default_value = "true"
+        )]
         push: bool,
     },
 
@@ -27,28 +31,28 @@ pub enum Commands {
     ///
     /// Also builds and pushes images to registry, unless --no-build is specified.
     Deploy {
-        #[arg(long, value_name = "PROFILE", help = "deployment profile")]
+        #[arg(short, long, value_name = "PROFILE", help = "deployment profile")]
         profile: String,
 
         #[arg(long, help = "Whether to not build/deploy challenge images")]
         no_build: bool,
 
-        #[arg(long, help = "Test changes without actually applying")]
+        #[arg(short = 'n', long, help = "Test changes without actually applying")]
         dry_run: bool,
     },
 
     /// Validate contents of rcds.yaml and any challenge.yaml files.
-    Validate,
+    Validate, // no args
 
     /// Checks access to various frontend/backend components.
     CheckAccess {
-        #[arg(long, help = "Check Kubernetes cluster access")]
+        #[arg(short, long, help = "Check Kubernetes cluster access")]
         kubernetes: bool,
 
-        #[arg(long, help = "Check frontend (rCTF) status")]
+        #[arg(short, long, help = "Check frontend (rCTF) access")]
         frontend: bool,
 
-        #[arg(long, help = "Check container registry access/permissions")]
+        #[arg(short, long, help = "Check container registry access and permissions")]
         registry: bool,
     },
 }
