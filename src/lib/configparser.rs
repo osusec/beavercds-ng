@@ -182,6 +182,8 @@ struct HTTPEndpoint {
 
 // Use Result type alias to automatically box errors for reporting
 pub fn parse_rcds_config() -> Result<RCDSConfig> {
+    trace!("trying to parse rcds.yaml");
+
     let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;
     let parsed = serde_yaml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
 
@@ -189,6 +191,8 @@ pub fn parse_rcds_config() -> Result<RCDSConfig> {
 }
 
 pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
+    trace!("trying to parse {path}");
+
     // extract category from challenge path
     let contents = fs::read_to_string(path)?;
     let mut parsed: ChallengeConfig = serde_yaml::from_str(&contents)?;
