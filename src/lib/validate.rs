@@ -5,10 +5,12 @@ use itertools::Itertools;
 use simplelog::*;
 
 pub fn run() {
-    debug!("running validate");
+    info!("validating config...");
 
     // attempt to parse configs but don't do anything with the results
     let (_, _) = validate_and_return();
+
+    info!("config is ok!")
 }
 
 pub fn validate_and_return() -> (RCDSConfig, Vec<ChallengeConfig>) {

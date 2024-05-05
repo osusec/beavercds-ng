@@ -1,10 +1,11 @@
 use clap::{Parser, Subcommand};
+use clap_verbosity_flag::{Verbosity, InfoLevel};
 
 #[derive(Parser, Debug)]
 /// Deployment manager for rCTF/beaverCTF challenges deployed on Kubernetes.
 pub struct Cli {
     #[command(flatten)]
-    pub verbose: clap_verbosity_flag::Verbosity,
+    pub verbose: Verbosity<InfoLevel>,
 
     #[command(subcommand)]
     pub command: Commands,

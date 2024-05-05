@@ -14,7 +14,7 @@ fn main() {
     let cli = commands::Cli::parse();
 
     let log_config = ConfigBuilder::new()
-        .set_time_level(LevelFilter::Trace)
+        .set_time_level(LevelFilter::Off)
         .build();
 
     TermLogger::init(
