@@ -190,7 +190,7 @@ pub fn parse_rcds_config() -> Result<RCDSConfig> {
     return Ok(parsed);
 }
 
-pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
+fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
     trace!("trying to parse {path}");
 
     // extract category from challenge path
@@ -205,7 +205,7 @@ pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
     return Ok(parsed);
 }
 
-pub fn parse_all_challenges() -> Vec<Result<ChallengeConfig, Error>> {
+pub fn parse_all_challenges() -> Vec<Result<ChallengeConfig>> {
     // find all challenge.yaml files
     SearchBuilder::default()
         .location(".")
