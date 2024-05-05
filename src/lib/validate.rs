@@ -7,6 +7,11 @@ use simplelog::*;
 pub fn run() {
     debug!("running validate");
 
+    // attempt to parse configs but don't do anything with the results
+    let (_, _) = validate_and_return();
+}
+
+pub fn validate_and_return() -> (RCDSConfig, Vec<ChallengeConfig>) {
     let config: RCDSConfig = match parse_rcds_config() {
         Ok(contents) => contents,
         Err(err) => {
@@ -27,9 +32,10 @@ pub fn run() {
 
     if !parse_errors.is_empty() {
         for err in parse_errors.iter() {
-            error!("{err:?}");
-            println!();
+            error!("{err:?}\n");
         }
         exit(1);
     }
+
+    return (config, challenges);
 }
