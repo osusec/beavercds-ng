@@ -1,9 +1,17 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml;
-use std::collections::BTreeMap;
-use std::{fs, io};
+use std::fs;
+use std::path::Path;
+use std::{collections::BTreeMap, path::Components};
 
-// Structs for rcds.yaml parsing
+use anyhow::{Context, Error, Result};
+use rust_search::SearchBuilder;
+use simplelog::*;
+
+//
+// ==== Structs for rcds.yaml parsing ====
+//
+
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct RCDSConfig {
     flag_regex: String,
@@ -40,10 +48,9 @@ struct UserPass {
     pass: String,
 }
 
-
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Resource {
-    cpu: i64, 
+    cpu: i64,
     memory: String,
 }
 
@@ -53,15 +60,14 @@ struct Defaults {
     resources: Resource,
 }
 
-
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct ProfileConfig {
-	// deployed_challenges: BTreeMap<String, bool>,
-	frontend_url: String,
-	frontend_token: Option<String>,
-	challenges_domain: String,
-	kubeconfig: String,
-	kubecontext: String,
+    // deployed_challenges: BTreeMap<String, bool>,
+    frontend_url: String,
+    frontend_token: Option<String>,
+    challenges_domain: String,
+    kubeconfig: String,
+    kubecontext: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -71,44 +77,20 @@ struct ChallengePoints {
     max: i64,
 }
 
-#[derive(Debug)]
-pub enum ParseError {
-    YAMLParseError(serde_yaml::Error),
-    IOError(std::io::Error),
-}
-
-impl From<io::Error> for ParseError {
-    fn from(err: io::Error) -> Self {
-        ParseError::IOError(err)
-    }
-}
-
-impl From<serde_yaml::Error> for ParseError {
-    fn from(err: serde_yaml::Error) -> Self {
-        ParseError::YAMLParseError(err)
-    }
-}
-
-pub fn parse_rcds_config() -> Result<RCDSConfig,ParseError> {
-    let my_stuff = fs::read_to_string("rcds.yaml")?;
-
-    let application_data: RCDSConfig = serde_yaml::from_str(&my_stuff)?;
-    println!("{:?}", application_data);
-    return Ok(application_data);
-}
-
-
-// Structs for challenge.yaml parsing
+//
+// ==== Structs for challenge.yaml parsing ====
+//
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct ChallengeConfig {
     name: String,
     author: String,
+    #[serde(default)] category: String,
     description: String,
     difficulty: i64,
     flag: FlagType,
     provide: Vec<String>,
-    pods: Vec<Pod>
+    pods: Vec<Pod>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -141,7 +123,6 @@ struct FileVerifier {
     verifier: String,
 }
 
-
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct Pod {
     name: String,
@@ -153,7 +134,6 @@ struct Pod {
     ports: Vec<PortConfig>,
     volume: Option<String>,
 }
-
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -170,7 +150,6 @@ struct BuildObject {
     args: ListOrMap,
 }
 
-
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 enum ListOrMap {
@@ -178,11 +157,10 @@ enum ListOrMap {
     MAP(BTreeMap<String, String>),
 }
 
-
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct PortConfig {
     internal: i64,
-    expose: PortType
+    expose: PortType,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -202,13 +180,37 @@ struct HTTPEndpoint {
     http: String,
 }
 
+// Use Result type alias to automatically box errors for reporting
+pub fn parse_rcds_config() -> Result<RCDSConfig> {
+    let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;
+    let parsed = serde_yaml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
 
+    return Ok(parsed);
+}
 
+pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
+    // extract category from challenge path
+    let contents = fs::read_to_string(path)?;
+    let mut parsed: ChallengeConfig = serde_yaml::from_str(&contents)?;
 
-pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig,ParseError> {
-    let my_stuff = fs::read_to_string(path)?;
+    let category = Path::new(path)
+        .components()
+        .nth_back(2)
+        .expect("could not find category from path");
+    parsed.category = category.as_os_str().to_str().unwrap().to_owned();
+    return Ok(parsed);
+}
 
-    let application_data: ChallengeConfig = serde_yaml::from_str(&my_stuff)?;
-    println!("{:?}", application_data);
-    return Ok(application_data);
+pub fn parse_all_challenges() -> Vec<Result<ChallengeConfig, Error>> {
+    // find all challenge.yaml files
+    SearchBuilder::default()
+        .location(".")
+        .search_input("challenge.yaml")
+        .build()
+        // try to parse each one
+        .map(|path| {
+            parse_challenge_config(&path)
+                .with_context(|| format!("failed to parse challenge config {}", path))
+        })
+        .collect()
 }

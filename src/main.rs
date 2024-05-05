@@ -1,17 +1,24 @@
 use clap::Parser;
+use simplelog::*;
 
 mod commands;
 mod lib {
     pub mod build;
     pub mod check_access;
+    pub mod configparser;
     pub mod deploy;
     pub mod validate;
 }
 
 fn main() {
+    println!();
+    println!();
+
     let cli = commands::Cli::parse();
 
-    println!("args: {:?}", cli);
+    setup_logging(cli.verbose);
+
+    debug!("args: {:?}", cli);
 
     // dispatch commands
     match &cli.command {
@@ -31,4 +38,23 @@ fn main() {
             dry_run,
         } => lib::deploy::run(profile, no_build, dry_run),
     }
+}
+
+fn setup_logging(verbose: bool) {
+    let log_level = match verbose {
+        true => LevelFilter::Debug,
+        _ => LevelFilter::Info,
+    };
+
+    let log_config = ConfigBuilder::new()
+        .set_time_level(LevelFilter::Trace)
+        .build();
+
+    TermLogger::init(
+        log_level,
+        log_config,
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )
+    .unwrap();
 }
