@@ -3,8 +3,8 @@ use clap::{Parser, Subcommand};
 #[derive(Parser, Debug)]
 /// Deployment manager for rCTF/beaverCTF challenges deployed on Kubernetes.
 pub struct Cli {
-    #[arg(short, long, global = true, help = "Show verbose output")]
-    pub verbose: bool,
+    #[command(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
 
     #[command(subcommand)]
     pub command: Commands,
