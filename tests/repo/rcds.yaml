@@ -1,0 +1,37 @@
+flag_regex: dam{[a-zA-Z...]}
+
+registry:
+  domain: registry.example.com/damctf
+  # then environment variables e.g. REG_USER/REG_PASS
+  user: admin
+  pass: admin
+
+defaults:
+  difficulty: 1
+  resources: { cpu: 1, memory: 500M }
+
+points:
+  - difficulty: 1
+    min: 0
+    max: 1337
+
+deploy:
+  # control challenge deployment status explicitly per environment/profile
+  staging:
+    misc/foo: true
+    rev/bar: false
+
+profiles:
+  # configure per-environment credentials etc
+  staging:
+    frontend_url: https://frontend.example
+    # or environment var (recommended): FRONTEND_TOKEN_$PROFILE=secretsecretsecret
+    frontend_token: secret
+    challenges_domain: chals.frontend.example
+    kubeconfig: path/to/kubeconfig
+    kubecontext: damctf-cluster
+    s3:
+      endpoint: x
+      region: x
+      accessKey: key
+      secretAccessKey: secret

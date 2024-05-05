@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 /// Deployment manager for rCTF/beaverCTF challenges deployed on Kubernetes.
 pub struct Cli {
     #[arg(short, long, global = true, help = "Show verbose output")]
-    verbose: bool,
+    pub verbose: bool,
 
     #[command(subcommand)]
     pub command: Commands,
