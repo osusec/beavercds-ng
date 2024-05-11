@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use crate::lib::configparser::*;
+use crate::configparser::*;
 use itertools::Itertools;
 use simplelog::*;
 

@@ -1,17 +1,11 @@
+use beavercds_ng::commands;
 use clap::Parser;
 use simplelog::*;
 
-mod commands;
-mod lib {
-    pub mod build;
-    pub mod check_access;
-    pub mod configparser;
-    pub mod deploy;
-    pub mod validate;
-}
+mod cli;
 
 fn main() {
-    let cli = commands::Cli::parse();
+    let cli = cli::Cli::parse();
 
     let log_config = ConfigBuilder::new()
         .set_time_level(LevelFilter::Off)
@@ -29,20 +23,20 @@ fn main() {
 
     // dispatch commands
     match &cli.command {
-        commands::Commands::Validate => lib::validate::run(),
+        cli::Commands::Validate => commands::validate::run(),
 
-        commands::Commands::CheckAccess {
+        cli::Commands::CheckAccess {
             kubernetes,
             frontend,
             registry,
-        } => lib::check_access::run(kubernetes, frontend, registry),
+        } => commands::check_access::run(kubernetes, frontend, registry),
 
-        commands::Commands::Build { profile, push } => lib::build::run(profile, push),
+        cli::Commands::Build { profile, push } => commands::build::run(profile, push),
 
-        commands::Commands::Deploy {
+        cli::Commands::Deploy {
             profile,
             no_build,
             dry_run,
-        } => lib::deploy::run(profile, no_build, dry_run),
+        } => commands::deploy::run(profile, no_build, dry_run),
     }
 }
