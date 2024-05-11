@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
-use serde_yaml;
+use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-use std::{collections::BTreeMap, path::Components};
 
 use anyhow::{Context, Error, Result};
 use rust_search::SearchBuilder;
@@ -85,7 +84,8 @@ struct ChallengePoints {
 pub struct ChallengeConfig {
     name: String,
     author: String,
-    #[serde(default)] category: String,
+    #[serde(default)]
+    category: String,
     description: String,
     difficulty: i64,
     flag: FlagType,
