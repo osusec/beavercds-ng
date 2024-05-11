@@ -29,7 +29,7 @@ fn main() {
 
     // dispatch commands
     match &cli.command {
-        commands::Commands::Validate {} => lib::validate::run(),
+        commands::Commands::Validate => lib::validate::run(),
 
         commands::Commands::CheckAccess {
             kubernetes,
