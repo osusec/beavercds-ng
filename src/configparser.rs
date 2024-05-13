@@ -12,7 +12,7 @@ use simplelog::*;
 //
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct RCDSConfig {
+pub struct RcdsConfig {
     flag_regex: String,
     registry: Registry,
     defaults: Defaults,
@@ -138,8 +138,8 @@ struct Pod {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 enum BuildSpec {
-    CONTEXT(String),
-    MAP(BTreeMap<String, String>),
+    Context(String),
+    Map(BTreeMap<String, String>),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -153,8 +153,8 @@ struct BuildObject {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 enum ListOrMap {
-    LIST(Vec<String>),
-    MAP(BTreeMap<String, String>),
+    List(Vec<String>),
+    Map(BTreeMap<String, String>),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -166,28 +166,28 @@ struct PortConfig {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 enum PortType {
-    TCP(TCPPort),
-    HTTP(HTTPEndpoint),
+    Tcp(TcpPort),
+    Http(HttpEndpoint),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct TCPPort {
+struct TcpPort {
     tcp: i64,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-struct HTTPEndpoint {
+struct HttpEndpoint {
     http: String,
 }
 
 // Use Result type alias to automatically box errors for reporting
-pub fn parse_rcds_config() -> Result<RCDSConfig> {
+pub fn parse_rcds_config() -> Result<RcdsConfig> {
     trace!("trying to parse rcds.yaml");
 
     let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;
     let parsed = serde_yaml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
 
-    return Ok(parsed);
+    Ok(parsed)
 }
 
 pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
@@ -202,7 +202,7 @@ pub fn parse_challenge_config(path: &str) -> Result<ChallengeConfig> {
         .nth_back(2)
         .expect("could not find category from path");
     parsed.category = category.as_os_str().to_str().unwrap().to_owned();
-    return Ok(parsed);
+    Ok(parsed)
 }
 
 pub fn parse_all_challenges() -> Vec<Result<ChallengeConfig, Error>> {

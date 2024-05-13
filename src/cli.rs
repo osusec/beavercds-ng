@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use clap_verbosity_flag::{Verbosity, InfoLevel};
+use clap_verbosity_flag::{InfoLevel, Verbosity};
 
 #[derive(Parser, Debug)]
 /// Deployment manager for rCTF/beaverCTF challenges deployed on Kubernetes.

@@ -8,16 +8,17 @@ pub fn run() {
     info!("validating config...");
 
     // attempt to parse configs but don't do anything with the results
-    let (_, _) = validate_and_return();
+    validate_and_return();
 
     info!("config is ok!")
 }
 
-pub fn validate_and_return() -> (RCDSConfig, Vec<ChallengeConfig>) {
-    let config: RCDSConfig = match parse_rcds_config() {
+pub fn validate_and_return() -> (RcdsConfig, Vec<ChallengeConfig>) {
+    let config = match parse_rcds_config() {
         Ok(contents) => contents,
         Err(err) => {
             error!("{err:?}");
+            // this should really be a Result imo :P - Zane
             exit(1);
         }
     };
@@ -39,5 +40,5 @@ pub fn validate_and_return() -> (RCDSConfig, Vec<ChallengeConfig>) {
         exit(1);
     }
 
-    return (config, challenges);
+    (config, challenges)
 }

@@ -1,3 +1,3 @@
-pub fn run(kubernetes: &bool, frontend: &bool, registry: &bool) {
-    println!("running check-access!")
+pub fn run(_kubernetes: &bool, _frontend: &bool, _registry: &bool) {
+    println!("running check-access!");
 }
