@@ -1,3 +1,3 @@
-pub fn run(profile: &str, push: &bool) {
-    println!("running build!")
+pub fn run(_profile: &str, _push: &bool) {
+    println!("running build!");
 }
