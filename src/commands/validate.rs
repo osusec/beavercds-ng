@@ -1,6 +1,7 @@
 use std::process::exit;
 
-use crate::configparser::*;
+use crate::configparser::challenge::*;
+use crate::configparser::config::*;
 use itertools::Itertools;
 use simplelog::*;
 
@@ -14,7 +15,7 @@ pub fn run() {
 }
 
 pub fn validate_and_return() -> (RcdsConfig, Vec<ChallengeConfig>) {
-    let config = match parse_rcds_config() {
+    let config = match parse_config() {
         Ok(contents) => contents,
         Err(err) => {
             error!("{err:?}");
