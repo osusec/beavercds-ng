@@ -1,9 +1,9 @@
+use anyhow::{Context, Result};
+use fully_pub::fully_pub;
 use serde::{Deserialize, Serialize};
+use simplelog::*;
 use std::collections::BTreeMap;
 use std::fs;
-
-use anyhow::{Context, Result};
-use simplelog::*;
 
 pub fn parse() -> Result<RcdsConfig> {
     trace!("trying to parse rcds.yaml");
@@ -19,7 +19,8 @@ pub fn parse() -> Result<RcdsConfig> {
 //
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct RcdsConfig {
+#[fully_pub]
+struct RcdsConfig {
     flag_regex: String,
     registry: Registry,
     defaults: Defaults,
@@ -29,12 +30,14 @@ pub struct RcdsConfig {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
+#[fully_pub]
 enum Registry {
     TopLevel(RegistryOne),
     Nested(RegistryTwo),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct RegistryOne {
     domain: String,
     build: UserPass,
@@ -42,6 +45,7 @@ struct RegistryOne {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct RegistryTwo {
     domain: String,
     user: String,
@@ -49,24 +53,28 @@ struct RegistryTwo {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct UserPass {
     user: String,
     pass: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct Resource {
+#[fully_pub]
+struct Resource {
     cpu: i64,
     memory: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct Defaults {
     difficulty: i64,
     resources: Resource,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct ProfileConfig {
     // deployed_challenges: BTreeMap<String, bool>,
     frontend_url: String,
@@ -77,6 +85,7 @@ struct ProfileConfig {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct ChallengePoints {
     difficulty: i64,
     min: i64,

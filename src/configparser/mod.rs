@@ -6,9 +6,6 @@ use itertools::Itertools;
 use simplelog::*;
 use std::sync::OnceLock;
 
-// pub static CONFIG: Lazy<config::RcdsConfig> = Lazy::new(|| config::parse_config());
-// pub static CHALLENGES: Lazy<Vec<challenge::ChallengeConfig>> = Lazy::new(|| validate_challenges());
-
 pub static CONFIG: OnceLock<config::RcdsConfig> = OnceLock::new();
 pub static CHALLENGES: OnceLock<Vec<challenge::ChallengeConfig>> = OnceLock::new();
 // type aliases for above's lifetimes
