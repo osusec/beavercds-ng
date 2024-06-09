@@ -1,3 +1,4 @@
+pub mod access_handlers;
 pub mod commands;
 pub mod configparser;
 

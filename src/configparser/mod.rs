@@ -1,7 +1,7 @@
 pub mod challenge;
 pub mod config;
 
-use anyhow::{Context, Error, Result};
+use anyhow::{Error, Result};
 use itertools::Itertools;
 use simplelog::*;
 use std::sync::OnceLock;
