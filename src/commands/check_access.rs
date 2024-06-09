@@ -33,7 +33,10 @@ pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool) {
     // die if there were any errors
     match results {
         Ok(_) => info!("  all good!"),
-        Err(err) => error!("{err:#}"),
+        Err(err) => {
+            error!("{err:#}");
+            exit(1)
+        }
     }
 }
 
@@ -47,11 +50,9 @@ fn check_profile(profile: &str, kubernetes: bool, frontend: bool, registry: bool
     if kubernetes {
         results.push(access::kube::check());
     }
-
     if frontend {
         results.push(access::frontend::check());
     }
-
     if registry {
         results.push(access::docker::check());
     }
