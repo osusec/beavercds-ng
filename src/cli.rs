@@ -47,6 +47,15 @@ pub enum Commands {
 
     /// Checks access to various frontend/backend components.
     CheckAccess {
+        #[arg(
+            short,
+            long,
+            value_name = "PROFILE",
+            help = "deployment profile to check",
+            default_value = "all"
+        )]
+        profile: String,
+
         #[arg(short, long, help = "Check Kubernetes cluster access")]
         kubernetes: bool,
 
