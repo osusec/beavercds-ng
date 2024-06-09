@@ -1,11 +1,11 @@
+use anyhow::{Context, Error, Result};
+use fully_pub::fully_pub;
+use rust_search::SearchBuilder;
 use serde::{Deserialize, Serialize};
+use simplelog::*;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-
-use anyhow::{Context, Error, Result};
-use rust_search::SearchBuilder;
-use simplelog::*;
 
 use crate::configparser::config::Resource;
 
@@ -42,7 +42,8 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
 //
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct ChallengeConfig {
+#[fully_pub]
+struct ChallengeConfig {
     name: String,
     author: String,
     #[serde(default)]
@@ -56,6 +57,7 @@ pub struct ChallengeConfig {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
+#[fully_pub]
 enum FlagType {
     RawString(String),
     File(FilePath),
@@ -65,26 +67,31 @@ enum FlagType {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct FilePath {
     file: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct FileText {
     text: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct FileRegex {
     regex: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct FileVerifier {
     verifier: String,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct Pod {
     name: String,
     build: BuildSpec,
@@ -98,12 +105,14 @@ struct Pod {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
+#[fully_pub]
 enum BuildSpec {
     Context(String),
     Map(BTreeMap<String, String>),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct BuildObject {
     context: String,
     dockerfile: String,
@@ -113,12 +122,14 @@ struct BuildObject {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
+#[fully_pub]
 enum ListOrMap {
     List(Vec<String>),
     Map(BTreeMap<String, String>),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct PortConfig {
     internal: i64,
     expose: PortType,
@@ -126,17 +137,20 @@ struct PortConfig {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
+#[fully_pub]
 enum PortType {
     Tcp(TcpPort),
     Http(HttpEndpoint),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct TcpPort {
     tcp: i64,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
 struct HttpEndpoint {
     http: String,
 }

@@ -211,6 +211,7 @@ dependencies = [
  "anyhow",
  "clap",
  "clap-verbosity-flag",
+ "fully_pub",
  "itertools",
  "k8s-openapi",
  "kube",
@@ -581,6 +582,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "fully_pub"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fd8cb48eceb4e8b471af6a8e4e223cbe1286552791b9ab274512ba9cfd754df"
+dependencies = [
+ "quote",
+ "syn 2.0.61",
 ]
 
 [[package]]
