@@ -1,10 +1,10 @@
-use crate::configparser::{validate_challenges, validate_config};
+use crate::configparser::{get_challenges, get_config};
 use simplelog::*;
 use std::process::exit;
 
 pub fn run() {
     info!("validating config...");
-    match validate_config() {
+    match get_config() {
         Ok(_) => info!("  config ok!"),
         Err(err) => {
             error!("{err:#}");
@@ -13,7 +13,7 @@ pub fn run() {
     }
 
     info!("validating challenges...");
-    match validate_challenges() {
+    match get_challenges() {
         Ok(_) => info!("  challenges ok!"),
         Err(errors) => {
             for e in errors.iter() {

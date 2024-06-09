@@ -16,7 +16,12 @@ pub type RcdsConfig = &'static config::RcdsConfig;
 pub type ChallengeConfigs = &'static Vec<challenge::ChallengeConfig>;
 
 /// get config from global, or load from file if not parsed yet
-pub fn validate_config() -> Result<RcdsConfig> {
+pub fn get_config() -> Result<RcdsConfig> {
+    // return already parsed value
+    if let Some(existing) = CONFIG.get() {
+        return Ok(existing);
+    }
+
     let config = config::parse();
 
     // if config parsed OK, set global and return that
@@ -28,7 +33,12 @@ pub fn validate_config() -> Result<RcdsConfig> {
 }
 
 /// get challenges from global, or load from files if not parsed yet
-pub fn validate_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
+pub fn get_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
+    // return already parsed value
+    if let Some(existing) = CHALLENGES.get() {
+        return Ok(existing);
+    }
+
     let (challenges, parse_errors): (Vec<_>, Vec<_>) =
         challenge::parse_all().into_iter().partition_result();
 
