@@ -5,7 +5,7 @@ use std::fs;
 use anyhow::{Context, Result};
 use simplelog::*;
 
-pub fn parse_config() -> Result<RcdsConfig> {
+pub fn parse() -> Result<RcdsConfig> {
     trace!("trying to parse rcds.yaml");
 
     let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;

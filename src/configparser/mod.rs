@@ -1,2 +1,46 @@
 pub mod challenge;
 pub mod config;
+
+use anyhow::{Context, Error, Result};
+use itertools::Itertools;
+use simplelog::*;
+use std::sync::OnceLock;
+
+// pub static CONFIG: Lazy<config::RcdsConfig> = Lazy::new(|| config::parse_config());
+// pub static CHALLENGES: Lazy<Vec<challenge::ChallengeConfig>> = Lazy::new(|| validate_challenges());
+
+pub static CONFIG: OnceLock<config::RcdsConfig> = OnceLock::new();
+pub static CHALLENGES: OnceLock<Vec<challenge::ChallengeConfig>> = OnceLock::new();
+// type aliases for above's lifetimes
+pub type RcdsConfig = &'static config::RcdsConfig;
+pub type ChallengeConfigs = &'static Vec<challenge::ChallengeConfig>;
+
+/// get config from global, or load from file if not parsed yet
+pub fn validate_config() -> Result<RcdsConfig> {
+    let config = config::parse();
+
+    // if config parsed OK, set global and return that
+    // otherwise pass through the errors from parsing
+    match config {
+        Ok(config) => Ok(CONFIG.get_or_init(|| config)),
+        Err(err) => Err(err),
+    }
+}
+
+/// get challenges from global, or load from files if not parsed yet
+pub fn validate_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
+    let (challenges, parse_errors): (Vec<_>, Vec<_>) =
+        challenge::parse_all().into_iter().partition_result();
+
+    debug!(
+        "parsed {} chals, {} others failed parsing",
+        challenges.len(),
+        parse_errors.len()
+    );
+
+    if parse_errors.is_empty() {
+        return Ok(CHALLENGES.get_or_init(|| challenges));
+    } else {
+        return Err(parse_errors);
+    }
+}
