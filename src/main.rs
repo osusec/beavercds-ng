@@ -26,12 +26,13 @@ fn main() {
         cli::Commands::Validate => commands::validate::run(),
 
         cli::Commands::CheckAccess {
+            profile,
             kubernetes,
             frontend,
             registry,
         } => {
             commands::validate::run();
-            commands::check_access::run(*kubernetes, *frontend, *registry)
+            commands::check_access::run(profile, kubernetes, frontend, registry)
         }
 
         cli::Commands::Build { profile, push } => {

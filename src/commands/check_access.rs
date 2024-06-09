@@ -1,4 +1,5 @@
-use anyhow::Result;
+use anyhow::{Context, Error, Result};
+use itertools::{self, Itertools};
 use simplelog::info;
 use simplelog::*;
 use std::process::exit;
@@ -6,63 +7,58 @@ use std::process::exit;
 use crate::access_handlers as access;
 use crate::configparser::get_config;
 
-pub fn run(kubernetes: bool, frontend: bool, registry: bool) {
+pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool) {
     // if user did not give a specific check, check all of them
     let check_all = !kubernetes && !frontend && !registry;
 
     let config = get_config().unwrap();
 
-    let mut problem = false;
+    let to_check: Vec<_> = match profile {
+        "all" => config.profiles.keys().cloned().collect(),
+        p => vec![String::from(p)],
+    };
 
-    for (profile, prof_config) in config.profiles.iter() {
-        info!("checking profile {profile}:");
+    let results: Result<()> = to_check
+        .into_iter()
+        .map(|p| {
+            check_profile(
+                &p,
+                *kubernetes || check_all,
+                *frontend || check_all,
+                *registry || check_all,
+            )
+        })
+        .collect();
 
-        if kubernetes || check_all {
-            info!("  kubernetes...");
-
-            // access::kube::check().unwrap_or_else(|err| error!("{err:?}"));
-            match access::kube::check() {
-                Ok(_) => info!("  ok!"),
-                Err(err) => {
-                    error!("{err:?}");
-                    problem = true;
-                }
-            }
-            // exit(1);
-        }
-
-        if frontend || check_all {
-            info!("  frontend...");
-            match check_frontend() {
-                Ok(_) => info!("  ok!"),
-                Err(err) => {
-                    error!("{err:?}");
-                    problem = true;
-                }
-            }
-        }
-
-        if registry || check_all {
-            info!("  container registry...");
-            match check_registry() {
-                Ok(_) => info!("  ok!"),
-                Err(err) => {
-                    error!("{err:?}");
-                    problem = true;
-                }
-            }
-        }
-    }
-
-    if problem {
-        exit(1);
+    // die if there were any errors
+    match results {
+        Ok(_) => info!("  all good!"),
+        Err(err) => error!("{err:#}"),
     }
 }
 
-fn check_frontend() -> Result<()> {
-    Ok(())
-}
+/// checks a single profile (`profile`) for the given accesses
+fn check_profile(profile: &str, kubernetes: bool, frontend: bool, registry: bool) -> Result<()> {
+    info!("checking profile {profile}...");
 
-fn check_registry() -> Result<()> {
-    Ok(())
+    // todo: this works but ehhh
+    let mut results = vec![];
+
+    if kubernetes {
+        results.push(access::kube::check());
+    }
+
+    if frontend {
+        results.push(access::frontend::check());
+    }
+
+    if registry {
+        results.push(access::docker::check());
+    }
+
+    // takes first Err in vec as Result() return
+    results
+        .into_iter()
+        .collect::<Result<()>>()
+        .with_context(|| format!("bad config for profile"))
 }
