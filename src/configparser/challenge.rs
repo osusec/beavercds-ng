@@ -9,7 +9,7 @@ use simplelog::*;
 
 use crate::configparser::config::Resource;
 
-pub fn parse_all_challenges() -> Vec<Result<ChallengeConfig, Error>> {
+pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
     // find all challenge.yaml files
     SearchBuilder::default()
         .location(".")
@@ -17,13 +17,12 @@ pub fn parse_all_challenges() -> Vec<Result<ChallengeConfig, Error>> {
         .build()
         // try to parse each one
         .map(|path| {
-            parse_challenge(&path)
-                .with_context(|| format!("failed to parse challenge config {}", path))
+            parse_one(&path).with_context(|| format!("failed to parse challenge config {}", path))
         })
         .collect()
 }
 
-pub fn parse_challenge(path: &str) -> Result<ChallengeConfig> {
+pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
     trace!("trying to parse {path}");
 
     // extract category from challenge path
