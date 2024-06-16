@@ -80,7 +80,7 @@ struct ProfileConfig {
     frontend_url: String,
     frontend_token: Option<String>,
     challenges_domain: String,
-    kubeconfig: String,
+    kubeconfig: Option<String>,
     kubecontext: String,
 }
 
