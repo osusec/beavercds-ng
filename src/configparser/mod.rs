@@ -23,10 +23,17 @@ pub fn get_config() -> Result<RcdsConfig> {
 
     // if config parsed OK, set global and return that
     // otherwise pass through the errors from parsing
-    match config {
-        Ok(config) => Ok(CONFIG.get_or_init(|| config)),
-        Err(err) => Err(err),
-    }
+    config.map(|c| CONFIG.get_or_init(|| c))
+}
+
+/// Get config struct for the passed profile name
+pub fn get_profile_config(profile_name: &str) -> Result<&config::ProfileConfig> {
+    get_config()?
+        .profiles
+        .get(profile_name)
+        .ok_or(Error::msg(format!(
+            "profile {profile_name} not found in config"
+        )))
 }
 
 /// get challenges from global, or load from files if not parsed yet
