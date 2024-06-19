@@ -2,7 +2,7 @@ use anyhow::{Error, Result};
 
 use crate::configparser::{config, CONFIG};
 
-/// kubernetes access checks
+/// container registry / daemon access checks
 pub fn check(profile: &config::ProfileConfig) -> Result<()> {
     Ok(())
 }
