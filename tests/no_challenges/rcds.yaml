@@ -28,8 +28,8 @@ profiles:
     # or environment var (recommended): FRONTEND_TOKEN_$PROFILE=secretsecretsecret
     frontend_token: secret
     challenges_domain: chals.frontend.example
-    kubeconfig: path/to/kubeconfig
-    kubecontext: damctf-cluster
+    # kubeconfig: path/to/kubeconfig
+    kubecontext: beavercds-testing
     s3:
       endpoint: x
       region: x
