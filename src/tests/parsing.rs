@@ -1,4 +1,5 @@
-use crate::configparser::*;
+use crate::configparser::challenge::*;
+// use crate::configparser::config::*;
 
 #[test]
 fn valid_challenge_yaml() {

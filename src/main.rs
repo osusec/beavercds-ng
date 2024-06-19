@@ -19,24 +19,34 @@ fn main() {
     )
     .unwrap();
 
-    debug!("args: {:?}", cli);
+    trace!("args: {:?}", cli);
 
     // dispatch commands
     match &cli.command {
         cli::Commands::Validate => commands::validate::run(),
 
         cli::Commands::CheckAccess {
+            profile,
             kubernetes,
             frontend,
             registry,
-        } => commands::check_access::run(kubernetes, frontend, registry),
+        } => {
+            commands::validate::run();
+            commands::check_access::run(profile, kubernetes, frontend, registry)
+        }
 
-        cli::Commands::Build { profile, push } => commands::build::run(profile, push),
+        cli::Commands::Build { profile, push } => {
+            commands::validate::run();
+            commands::build::run(profile, push)
+        }
 
         cli::Commands::Deploy {
             profile,
             no_build,
             dry_run,
-        } => commands::deploy::run(profile, no_build, dry_run),
+        } => {
+            commands::validate::run();
+            commands::deploy::run(profile, no_build, dry_run)
+        }
     }
 }
