@@ -33,7 +33,11 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
         .components()
         .nth_back(2)
         .expect("could not find category from path");
-    parsed.category = category.as_os_str().to_str().unwrap().to_owned();
+    category
+        .as_os_str()
+        .to_str()
+        .unwrap()
+        .clone_into(&mut parsed.category);
     Ok(parsed)
 }
 
