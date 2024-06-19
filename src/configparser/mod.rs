@@ -1,7 +1,7 @@
 pub mod challenge;
 pub mod config;
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use itertools::Itertools;
 use simplelog::*;
 use std::sync::OnceLock;
@@ -31,9 +31,7 @@ pub fn get_profile_config(profile_name: &str) -> Result<&config::ProfileConfig> 
     get_config()?
         .profiles
         .get(profile_name)
-        .ok_or(Error::msg(format!(
-            "profile {profile_name} not found in config"
-        )))
+        .ok_or(anyhow!("profile {profile_name} not found in config"))
 }
 
 /// get challenges from global, or load from files if not parsed yet

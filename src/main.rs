@@ -19,7 +19,7 @@ fn main() {
     )
     .unwrap();
 
-    debug!("args: {:?}", cli);
+    trace!("args: {:?}", cli);
 
     // dispatch commands
     match &cli.command {
