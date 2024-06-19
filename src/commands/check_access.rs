@@ -67,5 +67,5 @@ fn check_profile(
     results
         .into_iter()
         .collect::<Result<_>>()
-        .with_context(|| format!("error in profile {profile_name}:"))
+        .with_context(|| format!("error in profile {profile_name}"))
 }
