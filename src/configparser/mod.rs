@@ -53,6 +53,6 @@ pub fn get_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
     if parse_errors.is_empty() {
         return Ok(CHALLENGES.get_or_init(|| challenges));
     } else {
-        return Err(parse_errors);
+        Err(parse_errors)
     }
 }

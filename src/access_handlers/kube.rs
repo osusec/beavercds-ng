@@ -71,5 +71,5 @@ async fn client(profile: &config::ProfileConfig) -> Result<kube::Client> {
     // client::try_from returns a Result, but the Error is not compatible
     // with anyhow::Error, so assign this with ? and return Ok() separately
     let client = kube::Client::try_from(client_config)?;
-    return Ok(client);
+    Ok(client)
 }

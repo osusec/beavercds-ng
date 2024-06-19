@@ -18,17 +18,14 @@ pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool) {
         p => vec![String::from(p)],
     };
 
-    let results: Result<()> = to_check
-        .into_iter()
-        .map(|p| {
-            check_profile(
-                &p,
-                *kubernetes || check_all,
-                *frontend || check_all,
-                *registry || check_all,
-            )
-        })
-        .collect();
+    let results: Result<()> = to_check.into_iter().try_for_each(|p| {
+        check_profile(
+            &p,
+            *kubernetes || check_all,
+            *frontend || check_all,
+            *registry || check_all,
+        )
+    });
 
     // die if there were any errors
     match results {
