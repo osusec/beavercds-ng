@@ -29,30 +29,14 @@ struct RcdsConfig {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
 #[fully_pub]
-enum Registry {
-    TopLevel(RegistryOne),
-    Nested(RegistryTwo),
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct RegistryOne {
+struct Registry {
     domain: String,
     build: UserPass,
     cluster: UserPass,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct RegistryTwo {
-    domain: String,
-    user: String,
-    pass: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[fully_pub]
 struct UserPass {
     user: String,
