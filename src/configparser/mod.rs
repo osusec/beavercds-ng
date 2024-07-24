@@ -2,10 +2,12 @@ pub mod challenge;
 pub mod config;
 
 use anyhow::{anyhow, Error, Result};
+pub use config::UserPass; // reexport
 use itertools::Itertools;
 use simplelog::*;
 use std::sync::OnceLock;
 
+// todo: replace with std::LazyLock once v1.80 is out?
 pub static CONFIG: OnceLock<config::RcdsConfig> = OnceLock::new();
 pub static CHALLENGES: OnceLock<Vec<challenge::ChallengeConfig>> = OnceLock::new();
 // type aliases for above's lifetimes
