@@ -30,7 +30,7 @@ pub async fn check(profile: &config::ProfileConfig) -> Result<()> {
             }))?,
         )
         .await?;
-    let status = resp.status.ok_or(anyhow!("could not access cluster"))?;
+    let status = resp.status.ok_or(anyhow!("Could not access cluster"))?;
 
     // todo: Is it safe to unwrap here? Does this always return a username?
     // Seems like it but need to test more... dont want to panic

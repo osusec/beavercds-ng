@@ -1,80 +1,85 @@
-use anyhow::{anyhow, Error, Result};
-use docker_api::opts::{PullOpts, RegistryAuth};
-use docker_api::Docker;
-use futures::StreamExt;
+use anyhow::{anyhow, Context, Error, Result};
+use bollard::{auth::DockerCredentials, image::CreateImageOptions, Docker};
+use futures_util::{StreamExt, TryStreamExt};
+use itertools::Itertools;
 use simplelog::*;
-use std::env;
+use tokio;
 
 use crate::configparser::{config, get_config};
 
 /// container registry / daemon access checks
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn check(profile: &config::ProfileConfig) -> Result<()> {
-    debug!("checking docker api & registry");
-    let client = client()?;
+    // docker / podman does not keep track of whether registry credentials are
+    // valid or not. to check if we do have valid creds, we need to do something
+    // to present creds, like pulling an image.
 
-    // is docker (or podman) reachable?
-    let ping = client.ping().await?;
-    debug!("  docker version: {:#?}", ping.server);
+    let client = client()
+        .await
+        // truncate error chain with new error (returned error is way too verbose)
+        .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;
 
-    check_credentials(client).await?;
+    // try pulling a non-existent image and see what error we get back
+    check_credentials(client)
+        .await
+        .with_context(|| "Could not access registry (bad credentials?)")?;
 
     Ok(())
 }
 
-/// build docker client
-fn client() -> Result<Docker> {
-    // follow default convention
-    let host = env::var("DOCKER_HOST").unwrap_or("unix://var/run/docker.sock".into());
+async fn client() -> Result<Docker> {
+    debug!("connecting to docker...");
+    let client = Docker::connect_with_defaults()?;
+    client.ping().await?;
 
-    // coerce docker_api's Error to Anyhow::Error with ?
-    // instead of directly returning result
-    let client = Docker::new(host)?;
     Ok(client)
 }
 
 async fn check_credentials(client: Docker) -> Result<(), Error> {
     // do we have pull access to registry?
     // try pulling nonexistant image and see what error we get
+    debug!("checking registry credentials");
 
-    let auth = RegistryAuth::builder()
-        .username(get_config()?.registry.build.user.clone())
-        .password(get_config()?.registry.build.pass.clone())
-        .server_address(get_config()?.registry.domain.clone())
-        .build();
-    let opts = PullOpts::builder()
-        .image("bogusimage")
-        .tag("doesntexist")
-        .auth(auth)
-        .build();
+    let options = CreateImageOptions {
+        from_image: "bogusimage",
+        tag: "doesntexist",
+        ..Default::default()
+    };
+    let auth = DockerCredentials {
+        username: Some(get_config()?.registry.build.user.clone()),
+        password: Some(get_config()?.registry.build.pass.clone()),
+        serveraddress: Some(get_config()?.registry.domain.clone()),
+        ..Default::default()
+    };
 
-    let bad_auth_message: String = "unable to retrieve auth token: invalid username/password: unauthorized: incorrect username or password".into();
-    match pull_image(client, opts).await {
-        // did we get an authentication error?
-        Err(e) => match e {
-            docker_api::Error::Fault {
-                code,
-                message: bad_auth_message,
-            } => return Err(anyhow!("invalid registry credentials")),
+    let result = client
+        .create_image(Some(options.clone()), None, None)
+        .try_collect::<Vec<_>>()
+        .await;
 
-            _ => {}
-        },
-        Ok(_) => {} // somehow the image pulled...? sure i guess
-    }
+    debug!("result: {:?}", result);
 
-    Ok(())
-}
-
-async fn pull_image(client: Docker, opts: PullOpts) -> Result<(), docker_api::Error> {
-    let images = client.images();
-    let mut stream = images.pull(&opts);
-    let mut auth_error: Option<Error> = None;
-    while let Some(pull_result) = stream.next().await {
-        match pull_result {
-            Ok(output) => {}
-            Err(e) => return Err(e),
+    let err = match result {
+        Ok(info) => {
+            // somehow the image pulled...?
+            warn!(
+                "successfully pulled '{}:{}'! how did that happen?",
+                options.from_image, options.tag
+            );
+            // that's fine, I suppose; return Ok
+            return Ok(());
         }
-    }
+        Err(e) => e,
+    };
 
-    Ok(())
+    let expected_error_message: String = "image not found".into();
+    match err {
+        // if image does not exist, that is expected (and credentials worked)
+        bollard::errors::Error::DockerResponseServerError {
+            message: expected_error_message,
+            status_code: 403,
+        } => Ok(()),
+        // any other error means something else is wrong (with credentials or otherwise), pass it up
+        others => Err(others.into()),
+    }
 }
