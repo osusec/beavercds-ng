@@ -1,5 +1,9 @@
 use anyhow::{anyhow, Context, Error, Result};
-use bollard::{auth::DockerCredentials, image::CreateImageOptions, Docker};
+use bollard::{
+    auth::DockerCredentials,
+    image::{CreateImageOptions, PushImageOptions, TagImageOptions},
+    Docker,
+};
 use futures_util::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use simplelog::*;
@@ -24,6 +28,7 @@ pub async fn check(profile: &config::ProfileConfig) -> Result<()> {
         .await
         .with_context(|| "Could not access registry (bad credentials?)")?;
 
+    info!("  registry ok!");
     Ok(())
 }
 
@@ -36,50 +41,46 @@ async fn client() -> Result<Docker> {
 }
 
 async fn check_credentials(client: Docker) -> Result<(), Error> {
-    // do we have pull access to registry?
-    // try pulling nonexistant image and see what error we get
+    // do we have push access to registry?
+    // try pushing test image and see
     debug!("checking registry credentials");
 
-    let options = CreateImageOptions {
-        from_image: "bogusimage",
-        tag: "doesntexist",
+    // pull Alpine as test image
+    debug!("pulling alpine test image from docker.io");
+    let alpine = CreateImageOptions {
+        from_image: "alpine",
+        tag: "latest",
         ..Default::default()
     };
-    let auth = DockerCredentials {
-        username: Some(get_config()?.registry.build.user.clone()),
-        password: Some(get_config()?.registry.build.pass.clone()),
-        serveraddress: Some(get_config()?.registry.domain.clone()),
+    let docker_public = DockerCredentials {
+        serveraddress: Some("docker.io".to_string()),
         ..Default::default()
     };
-
-    let result = client
-        .create_image(Some(options.clone()), None, None)
+    client
+        .create_image(Some(alpine), None, Some(docker_public))
         .try_collect::<Vec<_>>()
-        .await;
+        .await?;
 
-    debug!("result: {:?}", result);
+    let registry_config = &get_config()?.registry;
 
-    let err = match result {
-        Ok(info) => {
-            // somehow the image pulled...?
-            warn!(
-                "successfully pulled '{}:{}'! how did that happen?",
-                options.from_image, options.tag
-            );
-            // that's fine, I suppose; return Ok
-            return Ok(());
-        }
-        Err(e) => e,
+    // rename alpine image
+    let tag_opts = TagImageOptions {
+        repo: registry_config.domain.clone(),
+        tag: "ignore".to_string(),
+    };
+    client.tag_image("alpine", Some(tag_opts));
+
+    // alpine image has been pulled, now push it to configured repo
+    debug!("pushing alpine to target registry");
+    let options = PushImageOptions { tag: "latest" };
+    let creds = DockerCredentials {
+        username: Some(registry_config.build.user.clone()),
+        password: Some(registry_config.build.pass.clone()),
+        serveraddress: Some(registry_config.domain.clone()),
+        ..Default::default()
     };
 
-    let expected_error_message: String = "image not found".into();
-    match err {
-        // if image does not exist, that is expected (and credentials worked)
-        bollard::errors::Error::DockerResponseServerError {
-            message: expected_error_message,
-            status_code: 403,
-        } => Ok(()),
-        // any other error means something else is wrong (with credentials or otherwise), pass it up
-        others => Err(others.into()),
-    }
+    client.push_image("alpine", Some(options), Some(creds));
+
+    Ok(())
 }
