@@ -7,11 +7,13 @@ use kube;
 use simplelog::*;
 use tokio;
 
-use crate::configparser::{config, CONFIG};
+use crate::configparser::{config, get_config, get_profile_config};
 
 /// kubernetes access checks
 #[tokio::main(flavor = "current_thread")] // make this a sync function
-pub async fn check(profile: &config::ProfileConfig) -> Result<()> {
+pub async fn check(profile_name: &str) -> Result<()> {
+    let profile = get_profile_config(profile_name)?;
+
     // we need to make sure that:
     // a) can talk to the cluster
     // b) have the right permissions (a la `kubectl auth can-i`)
