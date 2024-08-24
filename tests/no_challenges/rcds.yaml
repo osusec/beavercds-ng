@@ -1,10 +1,13 @@
 flag_regex: dam{[a-zA-Z...]}
 
 registry:
-  domain: registry.example.com/damctf
+  # domain: registry.example.com/damctf
+  domain: localhost:5000/damctf
   # then environment variables e.g. REG_USER/REG_PASS
-  user: admin
-  pass: admin
+  build: &creds
+    user: admin
+    pass: admin
+  cluster: *creds
 
 defaults:
   difficulty: 1
@@ -17,13 +20,11 @@ points:
 
 deploy:
   # control challenge deployment status explicitly per environment/profile
-  staging:
-    misc/foo: true
-    rev/bar: false
+  test: {}
 
 profiles:
   # configure per-environment credentials etc
-  staging:
+  test:
     frontend_url: https://frontend.example
     # or environment var (recommended): FRONTEND_TOKEN_$PROFILE=secretsecretsecret
     frontend_token: secret
