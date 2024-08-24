@@ -38,31 +38,25 @@ pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool) {
 }
 
 /// checks a single profile (`profile`) for the given accesses
-fn check_profile(
-    profile_name: &str,
-    kubernetes: bool,
-    frontend: bool,
-    registry: bool,
-) -> Result<()> {
-    let profile = get_profile_config(profile_name)?;
-    info!("checking profile {profile_name}...");
+fn check_profile(name: &str, kubernetes: bool, frontend: bool, registry: bool) -> Result<()> {
+    info!("checking profile {name}...");
 
     // todo: this works but ehhh
     let mut results = vec![];
 
     if kubernetes {
-        results.push(access::kube::check(profile));
+        results.push(access::kube::check(name));
     }
     if frontend {
-        results.push(access::frontend::check(profile));
+        results.push(access::frontend::check(name));
     }
     if registry {
-        results.push(access::docker::check(profile));
+        results.push(access::docker::check(name));
     }
 
     // takes first Err in vec as Result() return
     results
         .into_iter()
         .collect::<Result<_>>()
-        .with_context(|| format!("Error in profile '{profile_name}'"))
+        .with_context(|| format!("Error in profile '{name}'"))
 }
