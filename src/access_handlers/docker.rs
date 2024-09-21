@@ -9,14 +9,16 @@ use itertools::Itertools;
 use simplelog::*;
 use tokio;
 
-use crate::configparser::{config, get_config};
+use crate::configparser::{get_config, get_profile_config};
 
 /// container registry / daemon access checks
 #[tokio::main(flavor = "current_thread")] // make this a sync function
-pub async fn check(profile: &config::ProfileConfig) -> Result<()> {
+pub async fn check(profile_name: &str) -> Result<()> {
     // docker / podman does not keep track of whether registry credentials are
     // valid or not. to check if we do have valid creds, we need to do something
     // to present creds, like pulling an image.
+
+    let profile = get_profile_config(profile_name)?;
 
     let client = client()
         .await
