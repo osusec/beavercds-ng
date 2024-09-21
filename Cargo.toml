@@ -21,3 +21,4 @@ k8s-openapi = { version = "0.22.0", features = ["latest"] }
 tokio = { version = "1.38.0", features = ["rt", "macros"] }
 bollard = "0.16.1"
 futures-util = "0.3.30"
+cmd_lib = "1.9.4"
