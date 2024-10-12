@@ -14,4 +14,4 @@ flag:
 
 # on-disk files or CI-generated zip of build artifacts?
 provide:
-  - garf.webp
+  - garf.jpg
