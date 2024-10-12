@@ -1,0 +1,17 @@
+name: garf
+author: some guy
+description: |
+  enjoy this funky image
+
+# used for point values in rcds.yaml
+# 0 for survey/rules chal?
+# default: 1
+difficulty: 1
+
+# alternatively, flag: dam{wtf}
+flag:
+  text: dam{garf}
+
+# on-disk files or CI-generated zip of build artifacts?
+provide:
+  - garf.webp

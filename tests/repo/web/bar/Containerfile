@@ -1,0 +1,3 @@
+FROM nginx
+
+COPY site_source/ /var/www/html/
