@@ -1,0 +1,21 @@
+name: bar
+author: foo bar
+description: |
+  can you order a drink from the webserver?
+
+  {{ url }}
+
+difficulty: 1
+
+flag:
+  file: ./flag
+
+# each individual pod is gonna allow only 1 container for now
+pods:
+  - name: bar
+    build: ./
+    replicas: 1
+    ports:
+      - internal: 80
+        expose:
+          http: bar.chals.frontend.example
