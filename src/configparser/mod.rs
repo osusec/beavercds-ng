@@ -1,5 +1,6 @@
 pub mod challenge;
 pub mod config;
+pub mod field_coersion;
 
 use anyhow::{anyhow, Error, Result};
 pub use config::UserPass; // reexport

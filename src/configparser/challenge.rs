@@ -6,8 +6,11 @@ use simplelog::*;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
+use void::Void;
 
 use crate::configparser::config::Resource;
+use crate::configparser::field_coersion::string_or_struct;
 
 pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
     // find all challenge.yaml files
@@ -50,12 +53,14 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
 struct ChallengeConfig {
     name: String,
     author: String,
+    description: String,
 
     #[serde(default)]
     category: String,
 
-    description: String,
+    #[serde(default = "default_difficulty")]
     difficulty: i64,
+
     flag: FlagType,
 
     #[serde(default)]
@@ -63,6 +68,10 @@ struct ChallengeConfig {
 
     #[serde(default)]
     pods: Vec<Pod>, // optional if no containers used
+}
+
+fn default_difficulty() -> i64 {
+    1
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -104,8 +113,10 @@ struct FileVerifier {
 #[fully_pub]
 struct Pod {
     name: String,
-    build: BuildSpec,
-    image: String,
+
+    #[serde(flatten)]
+    image_source: ImageSource,
+
     env: Option<ListOrMap>,
     resources: Option<Resource>,
     replicas: i64,
@@ -114,20 +125,32 @@ struct Pod {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(rename_all = "lowercase")]
 #[fully_pub]
-enum BuildSpec {
-    Context(String),
-    Map(BTreeMap<String, String>),
+enum ImageSource {
+    #[serde(deserialize_with = "string_or_struct")]
+    Build(BuildObject),
+    Image(String),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
 struct BuildObject {
     context: String,
-    dockerfile: String,
-    dockerfile_inline: String,
-    args: ListOrMap,
+    dockerfile: Option<String>,
+    // dockerfile_inline: String,
+    #[serde(default)]
+    args: BTreeMap<String, String>,
+}
+impl FromStr for BuildObject {
+    type Err = Void;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(BuildObject {
+            context: s.to_string(),
+            dockerfile: None,
+            args: Default::default(),
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
