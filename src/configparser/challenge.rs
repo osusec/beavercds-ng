@@ -50,13 +50,19 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
 struct ChallengeConfig {
     name: String,
     author: String,
+
     #[serde(default)]
     category: String,
+
     description: String,
     difficulty: i64,
     flag: FlagType,
-    provide: Vec<String>,
-    pods: Vec<Pod>,
+
+    #[serde(default)]
+    provide: Vec<String>, // optional if no files provided
+
+    #[serde(default)]
+    pods: Vec<Pod>, // optional if no containers used
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
