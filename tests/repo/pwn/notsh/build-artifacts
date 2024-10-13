@@ -1,0 +1,5 @@
+# These need to be absolute paths
+/chal/notsh
+
+# libc path on Ubuntu
+/lib/x86_64-linux-gnu/libc.so.6

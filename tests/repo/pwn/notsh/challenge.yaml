@@ -1,0 +1,21 @@
+name: notsh
+author: captainGeech
+description: |-
+  This challenge isn't a shell
+
+  `nc {{host}} {{port}}`
+
+provide:
+- ./notsh.zip
+
+flag:
+  file: ./flag
+
+pods:
+  - name: main
+    build: .
+    replicas: 2
+    ports:
+      - internal: 31337
+        expose:
+          tcp: 30124
