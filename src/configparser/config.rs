@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use fully_pub::fully_pub;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
-use std::collections::BTreeMap;
+use std::collections::HashMap as Map;
 use std::fs;
 
 pub fn parse() -> Result<RcdsConfig> {
@@ -26,8 +26,8 @@ struct RcdsConfig {
     flag_regex: String,
     registry: Registry,
     defaults: Defaults,
-    deploy: BTreeMap<String, ProfileDeploy>,
-    profiles: BTreeMap<String, ProfileConfig>,
+    deploy: Map<String, ProfileDeploy>,
+    profiles: Map<String, ProfileConfig>,
     points: Vec<ChallengePoints>,
 }
 
@@ -64,13 +64,13 @@ struct Defaults {
 #[fully_pub]
 struct ProfileDeploy {
     #[serde(flatten)]
-    challenges: BTreeMap<String, bool>,
+    challenges: Map<String, bool>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
 struct ProfileConfig {
-    // deployed_challenges: BTreeMap<String, bool>,
+    // deployed_challenges: HashMap<String, bool>,
     frontend_url: String,
     frontend_token: Option<String>,
     challenges_domain: String,

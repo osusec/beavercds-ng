@@ -3,7 +3,7 @@ use fully_pub::fully_pub;
 use rust_search::SearchBuilder;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
-use std::collections::BTreeMap;
+use std::collections::HashMap as Map;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -58,7 +58,7 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
-struct ChallengeConfig {
+pub struct ChallengeConfig {
     name: String,
     author: String,
     description: String,
@@ -148,20 +148,24 @@ enum ImageSource {
 #[fully_pub]
 struct BuildObject {
     context: String,
-    dockerfile: Option<String>,
+    #[serde(default = "default_dockerfile")]
+    dockerfile: String,
     // dockerfile_inline: String,
     #[serde(default)]
-    args: BTreeMap<String, String>,
+    args: Map<String, String>,
 }
 impl FromStr for BuildObject {
     type Err = Void;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Ok(BuildObject {
             context: s.to_string(),
-            dockerfile: None,
+            dockerfile: default_dockerfile(),
             args: Default::default(),
         })
     }
+}
+fn default_dockerfile() -> String {
+    "Dockerfile".to_string()
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -169,7 +173,7 @@ impl FromStr for BuildObject {
 #[fully_pub]
 enum ListOrMap {
     List(Vec<String>),
-    Map(BTreeMap<String, String>),
+    Map(Map<String, String>),
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

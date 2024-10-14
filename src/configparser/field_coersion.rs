@@ -1,7 +1,7 @@
 // stuff to coerce bare string into full build context object
 // (based on serde example: https://serde.rs/string-or-struct.html)
 
-use std::collections::BTreeMap as Map;
+use std::collections::HashMap as Map;
 use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
