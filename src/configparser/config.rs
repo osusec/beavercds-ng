@@ -6,10 +6,12 @@ use std::collections::BTreeMap;
 use std::fs;
 
 pub fn parse() -> Result<RcdsConfig> {
-    trace!("trying to parse rcds.yaml");
+    debug!("trying to parse rcds.yaml");
 
     let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;
     let parsed = serde_yaml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
+
+    trace!("got config: {parsed:#?}");
 
     Ok(parsed)
 }
@@ -24,6 +26,7 @@ struct RcdsConfig {
     flag_regex: String,
     registry: Registry,
     defaults: Defaults,
+    deploy: BTreeMap<String, ProfileDeploy>,
     profiles: BTreeMap<String, ProfileConfig>,
     points: Vec<ChallengePoints>,
 }
@@ -55,6 +58,13 @@ struct Resource {
 struct Defaults {
     difficulty: i64,
     resources: Resource,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
+struct ProfileDeploy {
+    #[serde(flatten)]
+    challenges: BTreeMap<String, bool>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

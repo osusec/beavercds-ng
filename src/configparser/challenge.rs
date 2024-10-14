@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use void::Void;
 
@@ -26,21 +26,29 @@ pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
 }
 
 pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
-    trace!("trying to parse {path}");
+    debug!("trying to parse {path}");
 
     // extract category from challenge path
     let contents = fs::read_to_string(path)?;
     let mut parsed: ChallengeConfig = serde_yaml::from_str(&contents)?;
 
-    let category = Path::new(path)
+    // safe to unwrap here since path from find() always has the challenge yaml
+    let pathobj = Path::new(path).parent().unwrap();
+    parsed.directory = pathobj.strip_prefix("./").unwrap_or(pathobj).to_path_buf();
+
+    let category = parsed
+        .directory
         .components()
-        .nth_back(2)
+        .nth_back(1)
         .expect("could not find category from path");
     category
         .as_os_str()
         .to_str()
         .unwrap()
         .clone_into(&mut parsed.category);
+
+    trace!("got chal: {parsed:#?}");
+
     Ok(parsed)
 }
 
@@ -54,6 +62,9 @@ struct ChallengeConfig {
     name: String,
     author: String,
     description: String,
+
+    #[serde(default)]
+    directory: PathBuf,
 
     #[serde(default)]
     category: String,

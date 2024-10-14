@@ -36,6 +36,13 @@ pub fn get_profile_config(profile_name: &str) -> Result<&config::ProfileConfig> 
         .get(profile_name)
         .ok_or(anyhow!("profile {profile_name} not found in config"))
 }
+/// Get challenge deploy config struct for the passed profile name
+pub fn get_profile_deploy(profile_name: &str) -> Result<&config::ProfileDeploy> {
+    get_config()?
+        .deploy
+        .get(profile_name)
+        .ok_or(anyhow!("profile {profile_name} not found in deploy config"))
+}
 
 /// get challenges from global, or load from files if not parsed yet
 pub fn get_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
