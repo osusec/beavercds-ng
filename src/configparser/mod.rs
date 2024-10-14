@@ -3,6 +3,7 @@ pub mod config;
 pub mod field_coersion;
 
 use anyhow::{anyhow, Error, Result};
+pub use challenge::ChallengeConfig; // reexport
 pub use config::UserPass; // reexport
 use itertools::Itertools;
 use simplelog::*;
