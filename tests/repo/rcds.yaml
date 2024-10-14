@@ -22,8 +22,9 @@ points:
 deploy:
   # control challenge deployment status explicitly per environment/profile
   testing:
-    misc/foo: true
-    rev/bar: false
+    misc/garf: true
+    pwn/notsh: true
+    web/bar: false
 
 profiles:
   # configure per-environment credentials etc
