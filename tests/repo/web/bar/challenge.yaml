@@ -13,7 +13,9 @@ flag:
 # each individual pod is gonna allow only 1 container for now
 pods:
   - name: bar
-    build: ./
+    build:
+      context: .
+      dockerfile: Containerfile
     replicas: 1
     ports:
       - internal: 80

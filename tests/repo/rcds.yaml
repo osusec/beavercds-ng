@@ -24,7 +24,7 @@ deploy:
   testing:
     misc/garf: true
     pwn/notsh: true
-    web/bar: false
+    web/bar: true
 
 profiles:
   # configure per-environment credentials etc
