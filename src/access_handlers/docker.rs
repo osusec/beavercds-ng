@@ -9,6 +9,7 @@ use itertools::Itertools;
 use simplelog::*;
 use tokio;
 
+use crate::builder::docker::client;
 use crate::configparser::{get_config, get_profile_config};
 
 /// container registry / daemon access checks
@@ -43,14 +44,6 @@ pub async fn check(profile_name: &str) -> Result<()> {
 
     info!("  registry ok!");
     Ok(())
-}
-
-async fn client() -> Result<Docker> {
-    debug!("connecting to docker...");
-    let client = Docker::connect_with_defaults()?;
-    client.ping().await?;
-
-    Ok(client)
 }
 
 /// test build-time registry push credentials by pushing test image

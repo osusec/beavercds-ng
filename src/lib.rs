@@ -3,6 +3,7 @@
 // we dont need unused variables etc warnings while we're working on it
 
 pub mod access_handlers;
+pub mod builder;
 pub mod commands;
 pub mod configparser;
 
