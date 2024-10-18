@@ -1,5 +1,9 @@
-use anyhow::{anyhow, Context, Error, Result};
-use bollard::{image::BuildImageOptions, Docker};
+use anyhow::{anyhow, bail, Context, Error, Result};
+use bollard::auth::DockerCredentials;
+use bollard::errors::Error as DockerError;
+use bollard::image::{BuildImageOptions, PushImageOptions};
+use bollard::Docker;
+use core::fmt;
 use futures_util::{StreamExt, TryStreamExt};
 use simplelog::*;
 use std::{io::Read, path::Path};
@@ -8,6 +12,7 @@ use tempfile::tempfile;
 use tokio;
 
 use crate::configparser::challenge::BuildObject;
+use crate::configparser::UserPass;
 
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Result<String> {
@@ -37,14 +42,32 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
     let mut build_stream = client.build_image(build_opts, None, Some(tarball.into()));
 
     // stream output to stdout
-    while let Some(msg) = build_stream.next().await {
-        match msg?.stream {
-            Some(log) => info!(
-                "building {}: <bright-black>{}</>",
-                context.to_string_lossy(),
-                log.trim()
-            ),
-            None => (),
+    while let Some(item) = build_stream.next().await {
+        match item {
+            // error from stream?
+            Err(e) => match e {
+                DockerError::DockerStreamError { error } => bail!("build error: {error}"),
+                other => bail!("build error: {other:?}"),
+            },
+            Ok(msg) => {
+                // error from daemon?
+                if let Some(e) = msg.error_detail {
+                    bail!(
+                        "error building image: {}",
+                        e.message.unwrap_or("".to_string())
+                    )
+                }
+
+                match msg.stream {
+                    Some(log) => info!(
+                        "building {}: <bright-black>{}</>",
+                        context.to_string_lossy(),
+                        // tag,
+                        log.trim()
+                    ),
+                    None => (),
+                }
+            }
         }
     }
 
