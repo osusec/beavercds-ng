@@ -48,8 +48,7 @@ fn build_challenge_images(profile_name: &str, chal: &ChallengeConfig) -> Result<
     debug!("building images for chal {:?}", chal.directory);
     let config = get_config()?;
 
-    let built_tags = chal
-        .pods
+    chal.pods
         .iter()
         .filter_map(|p| match &p.image_source {
             Image(_) => None,
@@ -72,9 +71,20 @@ fn build_challenge_images(profile_name: &str, chal: &ChallengeConfig) -> Result<
                 )
             }
         })
+        .collect::<Result<_>>()
+}
+
+/// Push passed tags to registry
+pub fn push_tags(tags: Vec<String>) -> Result<Vec<String>> {
+    let config = get_config()?;
+
+    let built_tags = tags
+        .iter()
+        .map(|tag| {
+            push_image(tag, &config.registry.build)
+                .with_context(|| format!("error pushing image {tag}"))
+        })
         .collect::<Result<_>>()?;
 
-    trace!("built these images: {built_tags:?}");
-
-    return Ok(built_tags);
+    Ok(built_tags)
 }
