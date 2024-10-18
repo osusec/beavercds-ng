@@ -17,14 +17,14 @@ pub enum Commands {
     ///
     /// Images are tagged as <registry>/<chal>-<container>:<profile>.
     Build {
-        #[arg(short, long, value_name = "PROFILE", help = "deployment profile")]
+        /// Deployment profile
+        #[arg(short, long, value_name = "PROFILE")]
         profile: String,
 
-        #[arg(
-            long,
-            help = "Whether to push container images to registry (default: true)",
-            default_value = "true"
-        )]
+        /// Whether to push container images to registry (default: true)
+        #[arg(long, default_value = "true")]
+        // TODO: no way to actually set False...
+        // maybe revisit when negation flags are implemented: https://github.com/clap-rs/clap/issues/815
         push: bool,
     },
 
@@ -32,13 +32,16 @@ pub enum Commands {
     ///
     /// Also builds and pushes images to registry, unless --no-build is specified.
     Deploy {
-        #[arg(short, long, value_name = "PROFILE", help = "deployment profile")]
+        /// Deployment profile
+        #[arg(short, long, value_name = "PROFILE")]
         profile: String,
 
-        #[arg(long, help = "Whether to not build/deploy challenge images")]
+        /// Whether to not build/deploy challenge images
+        #[arg(long)]
         no_build: bool,
 
-        #[arg(short = 'n', long, help = "Test changes without actually applying")]
+        /// Test changes without actually applying
+        #[arg(short = 'n', long)]
         dry_run: bool,
     },
 
@@ -47,22 +50,20 @@ pub enum Commands {
 
     /// Checks access to various frontend/backend components.
     CheckAccess {
-        #[arg(
-            short,
-            long,
-            value_name = "PROFILE",
-            help = "deployment profile to check",
-            default_value = "all"
-        )]
+        /// Deployment profile to check
+        #[arg(short, long, value_name = "PROFILE", default_value = "all")]
         profile: String,
 
-        #[arg(short, long, help = "Check Kubernetes cluster access")]
+        /// Check Kubernetes cluster access
+        #[arg(short, long)]
         kubernetes: bool,
 
-        #[arg(short, long, help = "Check frontend (rCTF) access")]
+        /// Check frontend (rCTF) access
+        #[arg(short, long)]
         frontend: bool,
 
-        #[arg(short, long, help = "Check container registry access and permissions")]
+        /// Check container registry access and permissions
+        #[arg(short, long)]
         registry: bool,
     },
 }
