@@ -71,7 +71,48 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
         }
     }
 
-    Ok("".to_string())
+    Ok(tag.to_string())
+}
+
+#[tokio::main(flavor = "current_thread")] // make this a sync function
+pub async fn push_image(image_tag: &str, creds: &UserPass) -> Result<String> {
+    info!("pushing image {image_tag:?} to registry");
+    let client = client()
+        .await
+        // truncate error chain with new error (returned error is way too verbose)
+        .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;
+
+    let (image, tag) = image_tag
+        .rsplit_once(":")
+        .context("failed to get tag from full image string")?;
+
+    let opts = PushImageOptions { tag };
+    let creds = DockerCredentials {
+        username: Some(creds.user.clone()),
+        password: Some(creds.pass.clone()),
+        ..Default::default()
+    };
+
+    let mut push_stream = client.push_image(image, Some(opts), Some(creds));
+
+    // stream output to stdout
+    while let Some(item) = push_stream.next().await {
+        match item {
+            // error from stream?
+            Err(DockerError::DockerResponseServerError {
+                status_code,
+                message,
+            }) => bail!("error from daemon: {message}"),
+            Err(e) => bail!("{e:?}"),
+            Ok(msg) => {
+                debug!("{msg:?}");
+                if let Some(progress) = msg.progress_detail {
+                    info!("progress: {:?}/{:?}", progress.current, progress.total);
+                }
+            }
+        }
+    }
+    Ok(tag.to_string())
 }
 
 //

@@ -20,12 +20,15 @@ pub enum Commands {
         /// Deployment profile
         #[arg(short, long, value_name = "PROFILE")]
         profile: String,
-
-        /// Whether to push container images to registry (default: true)
+        /// Push container images to registry (default: true)
         #[arg(long, default_value = "true")]
-        // TODO: no way to actually set False...
-        // maybe revisit when negation flags are implemented: https://github.com/clap-rs/clap/issues/815
         push: bool,
+
+        /// Don't push container images to registry
+        #[arg(long, default_value = "false")]
+        no_push: bool,
+        // TODO: this is hacky. revisit when automatic negation flags are implemented:
+        // https://github.com/clap-rs/clap/issues/815
     },
 
     /// Deploy enabled challenges to cluster, updating any backing resources as necessary.

@@ -35,9 +35,14 @@ fn main() {
             commands::check_access::run(profile, kubernetes, frontend, registry)
         }
 
-        cli::Commands::Build { profile, push } => {
+        #[allow(unused_variables)]
+        cli::Commands::Build {
+            profile,
+            push,
+            no_push,
+        } => {
             commands::validate::run();
-            commands::build::run(profile, push)
+            commands::build::run(profile, &!no_push)
         }
 
         cli::Commands::Deploy {
