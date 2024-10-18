@@ -1,7 +1,7 @@
 // the thing that builds the stuff
 // what more is there to say
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use bollard::image::BuildImageOptions;
 use futures_util::stream::Iter;
 use itertools::Itertools;
@@ -15,15 +15,15 @@ use crate::configparser::challenge::{BuildObject, ChallengeConfig, ImageSource::
 use crate::configparser::{get_challenges, get_config, get_profile_config, get_profile_deploy};
 
 pub mod docker;
-use docker::build_image;
+use docker::{build_image, push_image};
 
-/// Build all enabled challenges for the given profile
-pub fn build_challenges(profile_name: &str) -> Result<()> {
-    for chal in enabled_challenges(profile_name)? {
-        build_challenge_images(profile_name, &chal);
-    }
-
-    Ok(())
+/// Build all enabled challenges for the given profile. Returns tags built
+pub fn build_challenges(profile_name: &str) -> Result<Vec<String>> {
+    enabled_challenges(profile_name)?
+        .iter()
+        .map(|chal| build_challenge_images(profile_name, chal))
+        .flatten_ok()
+        .collect::<Result<_>>()
 }
 
 /// Get all enabled challenges for profile
@@ -44,37 +44,37 @@ pub fn enabled_challenges(profile_name: &str) -> Result<Vec<&ChallengeConfig>> {
 }
 
 /// Build all images for challenge under given path, return image tag
-fn build_challenge_images(profile_name: &str, chal: &ChallengeConfig) -> String {
+fn build_challenge_images(profile_name: &str, chal: &ChallengeConfig) -> Result<Vec<String>> {
     debug!("building images for chal {:?}", chal.directory);
-    let build_infos: Vec<_> = chal
+    let config = get_config()?;
+
+    let built_tags = chal
         .pods
         .iter()
-        .filter_map(|c| match &c.image_source {
+        .filter_map(|p| match &p.image_source {
             Image(_) => None,
-            Build(b) => Some(b),
+            Build(b) => {
+                let tag = format!(
+                    "{registry}/{challenge}-{container}:{profile}",
+                    registry = config.registry.domain,
+                    challenge = chal.name,
+                    container = p.name,
+                    profile = profile_name
+                );
+                Some(
+                    docker::build_image(&chal.directory, b, &tag).with_context(|| {
+                        format!(
+                            "error building image {} for chal {}",
+                            p.name,
+                            chal.directory.to_string_lossy()
+                        )
+                    }),
+                )
+            }
         })
-        .collect();
+        .collect::<Result<_>>()?;
 
-    for (opts, tag) in zip(build_infos, challenge_image_tags(profile_name, chal)) {
-        docker::build_image(&chal.directory, opts, &tag);
-    }
+    trace!("built these images: {built_tags:?}");
 
-    "".to_string()
-}
-
-fn challenge_image_tags(profile_name: &str, chal: &ChallengeConfig) -> Vec<String> {
-    let config = get_config().unwrap();
-
-    chal.pods
-        .iter()
-        .map(|image| {
-            format!(
-                "{registry}/{challenge}-{container}:{profile}",
-                registry = config.registry.domain,
-                challenge = chal.name,
-                container = image.name,
-                profile = profile_name
-            )
-        })
-        .collect()
+    return Ok(built_tags);
 }

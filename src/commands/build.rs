@@ -7,5 +7,12 @@ use crate::configparser::{get_config, get_profile_config};
 pub fn run(profile_name: &str, push: &bool) {
     info!("building images...");
 
-    build_challenges(profile_name);
+    let tags = match build_challenges(profile_name) {
+        Ok(tags) => tags,
+        Err(e) => {
+            error!("{e:?}");
+            exit(1)
+        }
+    };
+    info!("images built successfully!");
 }

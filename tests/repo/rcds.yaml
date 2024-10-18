@@ -1,7 +1,7 @@
 flag_regex: dam{[a-zA-Z...]}
 
 registry:
-  domain: registry.example.com/damctf
+  domain: registry.localhost:5000/damctf
   # then environment variables e.g. REG_USER/REG_PASS
   build:
     user: admin
