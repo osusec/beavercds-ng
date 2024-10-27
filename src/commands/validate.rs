@@ -30,7 +30,7 @@ pub fn run() {
     // check global deploy settings for invalid challenges
     info!("validating deploy config...");
     for (profile_name, _pconfig) in config.profiles.iter() {
-        // get em
+        // fetch from config
         let deploy_challenges = match get_profile_deploy(profile_name) {
             Ok(d) => &d.challenges,
             Err(err) => {
@@ -39,18 +39,15 @@ pub fn run() {
             }
         };
 
-        // check em
+        // check for missing
         let missing: Vec<_> = deploy_challenges
             .keys()
-            .filter_map(
-                // invert match to filter for challenges that *dont* match
-                |path| match chals.iter().find(|c| c.directory == Path::new(path)) {
-                    Some(_) => None,
-                    None => Some(path),
-                },
+            .filter(
+                // try to find any challenge paths in deploy config that do not exist
+                |path| !chals.iter().any(|c| c.directory == Path::new(path)),
             )
             .collect();
-        if missing.len() > 0 {
+        if !missing.is_empty() {
             error!(
                 "Deploy settings for profile '{profile_name}' has challenges that do not exist:"
             );

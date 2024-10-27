@@ -58,14 +58,13 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
                     )
                 }
 
-                match msg.stream {
-                    Some(log) => info!(
+                if let Some(log) = msg.stream {
+                    info!(
                         "building {}: <bright-black>{}</>",
                         context.to_string_lossy(),
                         // tag,
                         log.trim()
-                    ),
-                    None => (),
+                    )
                 }
             }
         }
