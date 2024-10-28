@@ -5,11 +5,14 @@ use simplelog::*;
 use std::collections::HashMap as Map;
 use std::fs;
 
+use figment::providers::{Env, Yaml};
+use figment::Figment;
+
 pub fn parse() -> Result<RcdsConfig> {
     debug!("trying to parse rcds.yaml");
 
     let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;
-    let parsed = serde_yaml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
+    let parsed = serde_yml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
 
     trace!("got config: {parsed:#?}");
 

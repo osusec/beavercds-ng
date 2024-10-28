@@ -30,7 +30,7 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
 
     // extract category from challenge path
     let contents = fs::read_to_string(path)?;
-    let mut parsed: ChallengeConfig = serde_yaml::from_str(&contents)?;
+    let mut parsed: ChallengeConfig = serde_yml::from_str(&contents)?;
 
     // safe to unwrap here since path from find() always has the challenge yaml
     let pathobj = Path::new(path).parent().unwrap();
