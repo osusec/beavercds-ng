@@ -12,6 +12,9 @@ use void::Void;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 
+use figment::providers::{Env, Format, Serialized, Yaml};
+use figment::Figment;
+
 pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
     // find all challenge.yaml files
     SearchBuilder::default()
@@ -26,29 +29,21 @@ pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
 }
 
 pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
-    debug!("trying to parse {path}");
+    trace!("trying to parse {path}");
 
     // extract category from challenge path
-    let contents = fs::read_to_string(path)?;
-    let mut parsed: ChallengeConfig = serde_yml::from_str(&contents)?;
-
-    // safe to unwrap here since path from find() always has the challenge yaml
-    let pathobj = Path::new(path).parent().unwrap();
-    parsed.directory = pathobj.strip_prefix("./").unwrap_or(pathobj).to_path_buf();
-
-    let category = parsed
-        .directory
+    let category = Path::new(path)
         .components()
-        .nth_back(1)
-        .expect("could not find category from path");
-    category
+        .nth_back(2)
+        .expect("could not find category from path")
         .as_os_str()
         .to_str()
-        .unwrap()
-        .clone_into(&mut parsed.category);
+        .unwrap();
 
-    trace!("got chal: {parsed:#?}");
-
+    let parsed = Figment::new()
+        .merge(Yaml::file(path))
+        .merge(Serialized::default("category", category))
+        .extract()?;
     Ok(parsed)
 }
 

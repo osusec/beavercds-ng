@@ -55,6 +55,13 @@ pub fn get_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
     let (challenges, parse_errors): (Vec<_>, Vec<_>) =
         challenge::parse_all().into_iter().partition_result();
 
+    trace!(
+        "parsed chals: {:?}",
+        challenges
+            .iter()
+            .map(|c| format!("{}/{}", c.category, c.name))
+            .collect::<Vec<_>>()
+    );
     debug!(
         "parsed {} chals, {} others failed parsing",
         challenges.len(),

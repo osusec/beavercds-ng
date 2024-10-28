@@ -5,18 +5,22 @@ use simplelog::*;
 use std::collections::HashMap as Map;
 use std::fs;
 
-use figment::providers::{Env, Yaml};
+use figment::providers::{Env, Format, Yaml};
 use figment::Figment;
 
 pub fn parse() -> Result<RcdsConfig> {
     debug!("trying to parse rcds.yaml");
 
-    let contents = fs::read_to_string("rcds.yaml").with_context(|| "failed to read rcds.yaml")?;
-    let parsed = serde_yml::from_str(&contents).with_context(|| "failed to parse rcds.yaml")?;
+    let env_overrides = Env::prefixed("BEAVER_").split("_");
+    trace!("overriding config with envvar values: {:?}", env_overrides);
+    let config = Figment::from(Yaml::file("rcds.yaml"))
+        .merge(env_overrides)
+        .extract()
+        .with_context(|| "failed to parse rcds.yaml")?;
 
-    trace!("got config: {parsed:#?}");
+    trace!("got config: {config:#?}");
 
-    Ok(parsed)
+    Ok(config)
 }
 
 //

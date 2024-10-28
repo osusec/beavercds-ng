@@ -32,8 +32,7 @@ profiles:
     frontend_url: https://frontend.example
     frontend_token: secretsecretsecret
     challenges_domain: chals.frontend.example
-    kubeconfig: path/to/kubeconfig
-    kubecontext: damctf-cluster
+    kubecontext: testcluster
     s3:
       # local minio
       endpoint: localhost:9000
