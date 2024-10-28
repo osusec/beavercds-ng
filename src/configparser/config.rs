@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use fully_pub::fully_pub;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::collections::HashMap as Map;
@@ -11,8 +12,25 @@ use figment::Figment;
 pub fn parse() -> Result<RcdsConfig> {
     debug!("trying to parse rcds.yaml");
 
-    let env_overrides = Env::prefixed("BEAVER_").split("_");
-    trace!("overriding config with envvar values: {:?}", env_overrides);
+    let env_overrides = Env::prefixed("BEAVERCDS_").split("_").map(|var| {
+        // Using "_" as the split character works for almost all of our keys.
+        // but some of the profile settings keys have underscores as part of the
+        // key. This handles those few keys by undoing the s/_/./ that the
+        // Figment split() did.
+        var.to_string()
+            .to_lowercase()
+            .replace("frontend.", "frontend_")
+            .replace("challenges.", "challenges_")
+            .into()
+    });
+    trace!(
+        "overriding config with envvar values: {}",
+        env_overrides
+            .iter()
+            .map(|(key, val)| format!("{}='{}'", key.string, val))
+            .join(", ")
+    );
+
     let config = Figment::from(Yaml::file("rcds.yaml"))
         .merge(env_overrides)
         .extract()
