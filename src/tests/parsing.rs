@@ -3,7 +3,7 @@ use crate::configparser::challenge::*;
 
 #[test]
 fn valid_challenge_yaml() {
-    let parsed = serde_yaml::from_str::<ChallengeConfig>(
+    let parsed = serde_yml::from_str::<ChallengeConfig>(
         r#"
             name: test_chal
             author: "me! :)"
@@ -24,7 +24,7 @@ fn valid_challenge_yaml() {
 
 #[test]
 fn invalid_challenge_yaml() {
-    let parsed = serde_yaml::from_str::<ChallengeConfig>(
+    let parsed = serde_yml::from_str::<ChallengeConfig>(
         r#"
             name: there's nothing here
             difficulty: yes
