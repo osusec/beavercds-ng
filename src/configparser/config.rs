@@ -13,14 +13,15 @@ pub fn parse() -> Result<RcdsConfig> {
     debug!("trying to parse rcds.yaml");
 
     let env_overrides = Env::prefixed("BEAVERCDS_").split("_").map(|var| {
-        // Using "_" as the split character works for almost all of our keys.
-        // but some of the profile settings keys have underscores as part of the
-        // key. This handles those few keys by undoing the s/_/./ that the
-        // Figment split() did.
+        // Using "_" as the split character works for almost all of our keys,
+        // but some profile settings have underscores. This handles those few
+        // keys by undoing the s/_/./ that the figment::split() did.
         var.to_string()
             .to_lowercase()
             .replace("frontend.", "frontend_")
             .replace("challenges.", "challenges_")
+            .replace("s3.access.", "s3.access_")
+            .replace("s3.secret.", "s3.secret_")
             .into()
     });
     trace!(
@@ -115,8 +116,9 @@ struct ChallengePoints {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
 struct S3Config {
+    bucket_name: String,
     endpoint: String,
     region: String,
-    accesskey: String,
-    secretkey: String,
+    access_key: String,
+    secret_key: String,
 }

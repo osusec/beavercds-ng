@@ -23,8 +23,8 @@ start_stuff (){
   export BEAVERCDS_PROFILES_TESTING_KUBECONTEXT="$MINIKUBE_PROFILE"
   export BEAVERCDS_PROFILES_TESTING_S3_ENDPOINT="localhost:9000"
   export BEAVERCDS_PROFILES_TESTING_S3_REGION=""
-  export BEAVERCDS_PROFILES_TESTING_S3_ACCESSKEY=$(cat $COMPOSE_FILE | yq -r .services.minio.environment.MINIO_ROOT_USER)
-  export BEAVERCDS_PROFILES_TESTING_S3_SECRETKEY=$(cat $COMPOSE_FILE | yq -r .services.minio.environment.MINIO_ROOT_PASSWORD)
+  export BEAVERCDS_PROFILES_TESTING_S3_ACCESS_KEY=$(cat $COMPOSE_FILE | yq -r .services.minio.environment.MINIO_ROOT_USER)
+  export BEAVERCDS_PROFILES_TESTING_S3_SECRET_KEY=$(cat $COMPOSE_FILE | yq -r .services.minio.environment.MINIO_ROOT_PASSWORD)
 
   if [ $(exit_cmd) = "exit" ] ; then
     echo
