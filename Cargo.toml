@@ -27,6 +27,11 @@ bollard = "0.16.1"
 tar = "0.4.42"
 tempfile = "3.13.0"
 figment = { version = "0.10.19", features = ["env", "yaml", "test"] }
+rust-s3 = { version = "0.35.1", default-features = false, features = [
+  "fail-on-err",
+  "tokio-rustls-tls",
+] }
+
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"

@@ -30,9 +30,10 @@ fn main() {
             kubernetes,
             frontend,
             registry,
+            bucket,
         } => {
             commands::validate::run();
-            commands::check_access::run(profile, kubernetes, frontend, registry)
+            commands::check_access::run(profile, kubernetes, frontend, registry, bucket)
         }
 
         #[allow(unused_variables)]

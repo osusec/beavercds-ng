@@ -21,7 +21,7 @@ start_stuff (){
   # export variables if sourced or echo them if run
   export BEAVERCDS_REGISTRY_DOMAIN="host.minikube.internal:5000/testing"
   export BEAVERCDS_PROFILES_TESTING_KUBECONTEXT="$MINIKUBE_PROFILE"
-  export BEAVERCDS_PROFILES_TESTING_S3_ENDPOINT="localhost:9000"
+  export BEAVERCDS_PROFILES_TESTING_S3_ENDPOINT="http://localhost:9000"
   export BEAVERCDS_PROFILES_TESTING_S3_REGION=""
   export BEAVERCDS_PROFILES_TESTING_S3_ACCESS_KEY=$(cat $COMPOSE_FILE | yq -r .services.minio.environment.MINIO_ROOT_USER)
   export BEAVERCDS_PROFILES_TESTING_S3_SECRET_KEY=$(cat $COMPOSE_FILE | yq -r .services.minio.environment.MINIO_ROOT_PASSWORD)

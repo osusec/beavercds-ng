@@ -68,5 +68,8 @@ pub enum Commands {
         /// Check container registry access and permissions
         #[arg(short, long)]
         registry: bool,
+
+        #[arg(short, long, help = "Check S3 asset bucket access and permissions")]
+        bucket: bool,
     },
 }

@@ -1,13 +1,11 @@
 # compose to create registry container and ui to see if images pushed ok
 services:
   registry-server:
-    container_name: beavercds-registry
     image: registry
     ports:
       - 5000:5000
 
   registry-ui:
-    container_name: beavercds-registry-ui
     image: joxit/docker-registry-ui
     ports:
       - 8000:80
@@ -17,12 +15,26 @@ services:
       - NGINX_PROXY_PASS_URL=http://registry-server:5000
 
   minio:
-    container_name: beavercds-minio
     image: quay.io/minio/minio
-    command: server /data --console-address ":9001"
+    command: server /data --console-address ':9001'
     ports:
       - 9000:9000
       - 9001:9001
     environment:
       MINIO_ROOT_USER: testuser
-      MINIO_ROOT_PASSWORD: this_is_not_secure
+      MINIO_ROOT_PASSWORD: notsecure
+
+  # minio image does not set up default buckets or permissions from envvars, so
+  # use sidecar image to set up test bucket and allow public downloads
+  createbuckets:
+    image: quay.io/minio/minio
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -xec "
+        while ! curl --silent http://minio:9001 > /dev/null ; do sleep 1 ; done;
+        /usr/bin/mc alias set myminio http://minio:9000 testuser notsecure;
+        /usr/bin/mc mb myminio/testbucket;
+        /usr/bin/mc anonymous set download myminio/testbucket;
+        exit 0;
+      "
