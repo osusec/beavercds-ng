@@ -7,9 +7,9 @@ use std::process::exit;
 use crate::access_handlers as access;
 use crate::configparser::{get_config, get_profile_config};
 
-pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool) {
+pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool, bucket: &bool) {
     // if user did not give a specific check, check all of them
-    let check_all = !kubernetes && !frontend && !registry;
+    let check_all = !kubernetes && !frontend && !registry && !bucket;
 
     let config = get_config().unwrap();
 
@@ -24,6 +24,7 @@ pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool) {
             *kubernetes || check_all,
             *frontend || check_all,
             *registry || check_all,
+            *bucket || check_all,
         )
     });
 
@@ -44,6 +45,7 @@ fn check_profile(
     kubernetes: bool,
     frontend: bool,
     registry: bool,
+    bucket: bool,
 ) -> Result<(), Vec<Error>> {
     info!("checking profile {name}...");
 
@@ -57,6 +59,9 @@ fn check_profile(
     }
     if registry {
         results.push(access::docker::check(name).context("could not access container registry"));
+    }
+    if bucket {
+        results.push(access::s3::check(name));
     }
 
     let (ok, errs): (Vec<_>, Vec<_>) = results.into_iter().partition_result();
