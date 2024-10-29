@@ -34,8 +34,7 @@ profiles:
     challenges_domain: chals.frontend.example
     kubecontext: testcluster
     s3:
-      # local minio
       endpoint: localhost:9000
       region: x
-      accessKey: accesskey
-      secretAccessKey: secretkey
+      accesskey: somekey
+      secretkey: somesecret

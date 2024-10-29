@@ -101,6 +101,7 @@ struct ProfileConfig {
     challenges_domain: String,
     kubeconfig: Option<String>,
     kubecontext: String,
+    s3: S3Config,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -109,4 +110,13 @@ struct ChallengePoints {
     difficulty: i64,
     min: i64,
     max: i64,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
+struct S3Config {
+    endpoint: String,
+    region: String,
+    accesskey: String,
+    secretkey: String,
 }
