@@ -31,10 +31,18 @@ pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
 pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
     trace!("trying to parse {path}");
 
+    // remove 'challenge.yaml' from path
+    let chal_dir = Path::new(path)
+        // pop off leading `./` from SearchBuilder results
+        .strip_prefix("./")?
+        // remove last challenge.yaml
+        .parent()
+        .expect("could not extract path from search path");
+
     // extract category from challenge path
-    let category = Path::new(path)
+    let category = chal_dir
         .components()
-        .nth_back(2)
+        .nth_back(1)
         .expect("could not find category from path")
         .as_os_str()
         .to_str()
@@ -42,8 +50,13 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
 
     let parsed = Figment::new()
         .merge(Yaml::file(path))
+        // merge in generated data from file path
+        .merge(Serialized::default("directory", chal_dir))
         .merge(Serialized::default("category", category))
         .extract()?;
+
+    trace!("got challenge config: {parsed:#?}");
+
     Ok(parsed)
 }
 
@@ -57,12 +70,9 @@ pub struct ChallengeConfig {
     name: String,
     author: String,
     description: String,
-
-    #[serde(default)]
-    directory: PathBuf,
-
-    #[serde(default)]
     category: String,
+
+    directory: PathBuf,
 
     #[serde(default = "default_difficulty")]
     difficulty: i64,
