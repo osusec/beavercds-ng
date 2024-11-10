@@ -53,5 +53,9 @@ fn main() {
             commands::validate::run();
             commands::deploy::run(profile, no_build, dry_run)
         }
+
+        cli::Commands::Init {
+            interactive
+        } => commands::init::run(interactive)
     }
 }
