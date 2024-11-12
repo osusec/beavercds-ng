@@ -24,7 +24,7 @@ pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool, b
             (
                 profile_name, // associate profile name to results
                 check_profile(
-                    &profile_name,
+                    profile_name,
                     *kubernetes || check_all,
                     *frontend || check_all,
                     *registry || check_all,
