@@ -13,29 +13,43 @@ pub fn run(profile: &str, kubernetes: &bool, frontend: &bool, registry: &bool, b
 
     let config = get_config().unwrap();
 
-    let to_check: Vec<_> = match profile {
+    let profiles_to_check: Vec<_> = match profile {
         "all" => config.profiles.keys().cloned().collect(),
         p => vec![String::from(p)],
     };
 
-    let results: Result<(), Vec<_>> = to_check.into_iter().try_for_each(|p| {
-        check_profile(
-            &p,
-            *kubernetes || check_all,
-            *frontend || check_all,
-            *registry || check_all,
-            *bucket || check_all,
-        )
-    });
+    let results: Vec<_> = profiles_to_check
+        .iter()
+        .map(|profile_name| {
+            (
+                profile_name, // associate profile name to results
+                check_profile(
+                    &profile_name,
+                    *kubernetes || check_all,
+                    *frontend || check_all,
+                    *registry || check_all,
+                    *bucket || check_all,
+                ),
+            )
+        })
+        .collect();
+
+    debug!("access results: {results:?}");
 
     // die if there were any errors
-    match results {
-        Ok(_) => info!("  all good!"),
-        Err(errs) => {
-            error!("Error checking profile {profile}:");
-            errs.iter().for_each(|e| error!("{e:?}\n"));
-            exit(1)
+    let mut should_exit = false;
+    for (profile, result) in results.iter() {
+        match result {
+            Ok(_) => info!("  all good!"),
+            Err(errs) => {
+                error!("{} errors checking profile {profile}:", errs.len());
+                errs.iter().for_each(|e| error!("{e:?}\n"));
+                should_exit = true
+            }
         }
+    }
+    if should_exit {
+        exit(1);
     }
 }
 
@@ -49,22 +63,32 @@ fn check_profile(
 ) -> Result<(), Vec<Error>> {
     info!("checking profile {name}...");
 
-    let mut results = vec![];
+    let mut errs = vec![];
 
     if kubernetes {
-        results.push(access::kube::check(name).context("could not access kubernetes cluster"));
+        match access::kube::check(name).context("could not access kubernetes cluster") {
+            Err(e) => errs.push(e),
+            Ok(_) => info!("  kubernetes ok!"),
+        };
     }
     if frontend {
-        results.push(access::frontend::check(name).context("could not access frontend"));
+        match access::frontend::check(name).context("could not access frontend") {
+            Err(e) => errs.push(e),
+            Ok(_) => info!("  frontend ok!"),
+        };
     }
     if registry {
-        results.push(access::docker::check(name).context("could not access container registry"));
+        match access::docker::check(name).context("could not access container registry") {
+            Err(e) => errs.push(e),
+            Ok(_) => info!("  registry ok!"),
+        };
     }
     if bucket {
-        results.push(access::s3::check(name));
+        match access::s3::check(name).context("could not access asset bucket") {
+            Err(e) => errs.push(e),
+            Ok(_) => info!("  bucket ok!"),
+        };
     }
-
-    let (ok, errs): (Vec<_>, Vec<_>) = results.into_iter().partition_result();
 
     if !errs.is_empty() {
         Err(errs)
