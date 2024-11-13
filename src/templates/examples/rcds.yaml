@@ -1,0 +1,41 @@
+flag_regex: dam{[a-zA-Z...]}
+
+registry:
+  domain: localhost:5000/damctf
+  # or environment vars e.g. BEAVERCDS_REGISTRY_BUILD_USER / etc
+  build:
+    user: admin
+    pass: notrealcreds
+  cluster:
+    user: cluster
+    pass: alsofake
+
+defaults:
+  difficulty: 1
+  resources: { cpu: 1, memory: 500M }
+
+points:
+  - difficulty: 1
+    min: 0
+    max: 1337
+
+deploy:
+  # control challenge deployment status explicitly per environment/profile
+  testing:
+    misc/garf: true
+    pwn/notsh: true
+    web/bar: true
+
+profiles:
+  # configure per-environment credentials etc
+  testing:
+    frontend_url: https://frontend.example
+    frontend_token: secretsecretsecret
+    challenges_domain: chals.frontend.example
+    kubecontext: testcluster
+    s3:
+      # local minio
+      endpoint: localhost:9000
+      region: x
+      accessKey: accesskey
+      secretAccessKey: secretkey
