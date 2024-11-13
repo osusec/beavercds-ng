@@ -97,7 +97,7 @@ struct ProfileDeploy {
 struct ProfileConfig {
     // deployed_challenges: HashMap<String, bool>,
     frontend_url: String,
-    frontend_token: Option<String>,
+    frontend_token: String,
     challenges_domain: String,
     kubeconfig: Option<String>,
     kubecontext: String,
