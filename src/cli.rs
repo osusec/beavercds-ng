@@ -73,9 +73,13 @@ pub enum Commands {
     /// Copy an initial rcds.yaml to the current working directory.
     ///
     /// If interactive is enabled, then it will prompt for the various fields of the config file. If left disabled, then it will copy it out with fake data of the expected format.
+    /// 
+    /// If blank is enabled, then it will copy out the file without any fields set. If left disabled, it will write the default non-interactive example config to file.
     Init {
         /// Guided filling out of the config
         #[arg(short = 'i', long)]
-        interactive: bool
+        interactive: bool,
+        #[arg(short = 'b', long)]
+        blank: bool
     }
 }
