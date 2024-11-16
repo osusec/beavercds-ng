@@ -225,9 +225,7 @@ fn challenge_pods() {
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
-                        expose: PortType::Http(HttpEndpoint {
-                            http: "test.chals.example.com".to_string()
-                        })
+                        expose: ExposeType::Http("test.chals.example.com".to_string())
                     }],
                     volume: None
                 },
@@ -243,7 +241,7 @@ fn challenge_pods() {
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 8000,
-                        expose: PortType::Tcp(TcpPort { tcp: 12345 })
+                        expose: ExposeType::Tcp(12345)
                     }],
                     volume: None
                 },
@@ -312,9 +310,7 @@ fn challenge_pod_build() {
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
-                        expose: PortType::Http(HttpEndpoint {
-                            http: "test.chals.example.com".to_string()
-                        })
+                        expose: ExposeType::Http("test.chals.example.com".to_string())
                     }],
                     volume: None
                 },
@@ -333,9 +329,7 @@ fn challenge_pod_build() {
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
-                        expose: PortType::Http(HttpEndpoint {
-                            http: "test2.chals.example.com".to_string()
-                        })
+                        expose: ExposeType::Http("test2.chals.example.com".to_string())
                     }],
                     volume: None
                 }
@@ -404,9 +398,7 @@ fn challenge_pod_env() {
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
-                        expose: PortType::Http(HttpEndpoint {
-                            http: "test.chals.example.com".to_string()
-                        })
+                        expose: ExposeType::Http("test.chals.example.com".to_string())
                     }],
                     volume: None
                 },
@@ -421,9 +413,7 @@ fn challenge_pod_env() {
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
-                        expose: PortType::Http(HttpEndpoint {
-                            http: "test2.chals.example.com".to_string()
-                        })
+                        expose: ExposeType::Http("test2.chals.example.com".to_string())
                     }],
                     volume: None
                 }
