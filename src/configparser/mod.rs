@@ -52,25 +52,7 @@ pub fn get_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
         return Ok(existing);
     }
 
-    let (challenges, parse_errors): (Vec<_>, Vec<_>) =
-        challenge::parse_all().into_iter().partition_result();
+    let chals = challenge::parse_all();
 
-    trace!(
-        "parsed chals: {:?}",
-        challenges
-            .iter()
-            .map(|c| format!("{}/{}", c.category, c.name))
-            .collect::<Vec<_>>()
-    );
-    debug!(
-        "parsed {} chals, {} others failed parsing",
-        challenges.len(),
-        parse_errors.len()
-    );
-
-    if parse_errors.is_empty() {
-        return Ok(CHALLENGES.get_or_init(|| challenges));
-    } else {
-        Err(parse_errors)
-    }
+    chals.map(|c| CHALLENGES.get_or_init(|| c))
 }
