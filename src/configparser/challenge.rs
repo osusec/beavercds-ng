@@ -64,12 +64,45 @@ pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
         .to_str()
         .unwrap();
 
-    let parsed = Figment::new()
+    let mut parsed: ChallengeConfig = Figment::new()
         .merge(Yaml::file(path.clone()))
         // merge in generated data from file path
         .merge(Serialized::default("directory", chal_dir))
         .merge(Serialized::default("category", category))
         .extract()?;
+
+    // coerce pod env lists to maps
+    // TODO: do this in serde deserialize?
+    for pod in parsed.pods.iter_mut() {
+        pod.env = match pod.env.clone() {
+            ListOrMap::Map(m) => ListOrMap::Map(m),
+            ListOrMap::List(l) => {
+                // split NAME=VALUE list into separate name and value
+                let split: Vec<(String, String)> = l
+                    .into_iter()
+                    .map(|var| {
+                        // error if envvar is malformed
+                        let split = var.splitn(2, '=').collect_vec();
+                        if split.len() == 2 {
+                            Ok((split[0].to_string(), split[1].to_string()))
+                        } else {
+                            Err(anyhow!("Cannot split envvar {var:?}"))
+                        }
+                    })
+                    .collect::<Result<_>>()?;
+                // build hashmap from split name and value iteratively. this
+                // can't use HashMap::from() here since the values are dynamic
+                // and from() only works for Vec constants
+                let map = split
+                    .into_iter()
+                    .fold(Map::new(), |mut map, (name, value)| {
+                        map.insert(name, value);
+                        map
+                    });
+                ListOrMap::Map(map)
+            }
+        }
+    }
 
     trace!("got challenge config: {parsed:#?}");
 
@@ -149,7 +182,9 @@ struct Pod {
     #[serde(flatten)]
     image_source: ImageSource,
 
-    env: Option<ListOrMap>,
+    #[serde(default)]
+    env: ListOrMap,
+
     resources: Option<Resource>,
     replicas: i64,
     ports: Vec<PortConfig>,
@@ -189,12 +224,17 @@ fn default_dockerfile() -> String {
     "Dockerfile".to_string()
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[serde(untagged)]
 #[fully_pub]
 enum ListOrMap {
     List(Vec<String>),
     Map(Map<String, String>),
+}
+impl Default for ListOrMap {
+    fn default() -> Self {
+        ListOrMap::Map(Map::new())
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
