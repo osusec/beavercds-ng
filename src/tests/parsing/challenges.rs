@@ -118,6 +118,56 @@ fn challenge_three_levels() {
 }
 
 #[test]
+fn challenge_missing_fields() {
+    figment::Jail::expect_with(|jail| {
+        let dir = jail.create_dir("test/noflag")?;
+        jail.create_file(
+            dir.join("challenge.yaml"),
+            r#"
+            name: testchal
+            author: nobody
+            description: just a test challenge
+            difficulty: 1
+        "#,
+        )?;
+
+        let dir = jail.create_dir("test/noauthor")?;
+        jail.create_file(
+            dir.join("challenge.yaml"),
+            r#"
+            name: testchal
+            description: just a test challenge
+            difficulty: 1
+
+            flag:
+                text: test{asdf}
+        "#,
+        )?;
+
+        let dir = jail.create_dir("test/nodescrip")?;
+        jail.create_file(
+            dir.join("challenge.yaml"),
+            r#"
+            name: testchal
+            author: nobody
+            difficulty: 1
+
+            flag:
+                text: test{asdf}
+        "#,
+        )?;
+
+        let chals = parse_all();
+        assert!(chals.is_err());
+        let errs = chals.unwrap_err();
+
+        assert_eq!(errs.len(), 3);
+
+        Ok(())
+    })
+}
+
+#[test]
 /// Challenges can omit both provides and pods fields if needed
 fn challenge_no_provides_or_pods() {
     figment::Jail::expect_with(|jail| {
@@ -221,7 +271,7 @@ fn challenge_pods() {
                     name: "foo".to_string(),
                     image_source: ImageSource::Image("nginx".to_string()),
                     replicas: 2,
-                    env: None,
+                    env: ListOrMap::Map(HashMap::new()),
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
@@ -237,7 +287,7 @@ fn challenge_pods() {
                         args: HashMap::new()
                     }),
                     replicas: 1,
-                    env: None,
+                    env: ListOrMap::Map(HashMap::new()),
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 8000,
@@ -306,7 +356,7 @@ fn challenge_pod_build() {
                         args: HashMap::new()
                     }),
                     replicas: 1,
-                    env: None,
+                    env: ListOrMap::Map(HashMap::new()),
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
@@ -325,7 +375,7 @@ fn challenge_pod_build() {
                         ])
                     }),
                     replicas: 1,
-                    env: None,
+                    env: ListOrMap::Map(HashMap::new()),
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
@@ -391,10 +441,10 @@ fn challenge_pod_env() {
 
                     image_source: ImageSource::Image("nginx".to_string()),
                     replicas: 1,
-                    env: Some(ListOrMap::Map(HashMap::from([
+                    env: ListOrMap::Map(HashMap::from([
                         ("FOO".to_string(), "this".to_string()),
-                        ("BAR".to_string(), "that".to_string())
-                    ]))),
+                        ("BAR".to_string(), "that".to_string()),
+                    ])),
                     resources: None,
                     ports: vec![PortConfig {
                         internal: 80,
@@ -406,9 +456,9 @@ fn challenge_pod_env() {
                     name: "bar".to_string(),
                     image_source: ImageSource::Image("nginx".to_string()),
                     replicas: 1,
-                    env: Some(ListOrMap::List(vec![
-                        "FOO=this".to_string(),
-                        "BAR=that".to_string(),
+                    env: ListOrMap::Map(HashMap::from([
+                        ("FOO".to_string(), "this".to_string()),
+                        ("BAR".to_string(), "that".to_string()),
                     ])),
                     resources: None,
                     ports: vec![PortConfig {
@@ -419,6 +469,44 @@ fn challenge_pod_env() {
                 }
             ]
         );
+
+        Ok(())
+    })
+}
+
+#[test]
+/// Challenge pod envvar strings error if malformed
+fn challenge_pod_bad_env() {
+    figment::Jail::expect_with(|jail| {
+        let dir = jail.create_dir("foo/test")?;
+        jail.create_file(
+            dir.join("challenge.yaml"),
+            r#"
+            name: testchal
+            author: nobody
+            description: just a test challenge
+            difficulty: 1
+
+            flag:
+                text: test{it-works}
+
+            pods:
+                - name: foo
+                  image: nginx
+                  env:
+                    - FOO
+                  replicas: 1
+                  ports:
+                    - internal: 80
+                      expose:
+                        http: test.chals.example.com
+        "#,
+        )?;
+
+        let chals = parse_all();
+        assert!(chals.is_err());
+        let errs = chals.unwrap_err();
+        assert_eq!(errs.len(), 1);
 
         Ok(())
     })
