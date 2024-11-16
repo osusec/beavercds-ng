@@ -1,10 +1,12 @@
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
+use figment::providers::{Env, Format, Serialized, Yaml};
+use figment::Figment;
 use fully_pub::fully_pub;
-use rust_search::SearchBuilder;
+use glob::glob;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::collections::HashMap as Map;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use void::Void;
@@ -12,30 +14,25 @@ use void::Void;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 
-use figment::providers::{Env, Format, Serialized, Yaml};
-use figment::Figment;
-
 pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
     // find all challenge.yaml files
-    SearchBuilder::default()
-        .location(".")
-        .search_input("challenge.yaml")
-        .build()
+    // only look for paths two entries deep (i.e. always at `<category>/<name>/challenge.yaml`)
+    glob("*/*/challenge.yaml")
+        .unwrap() // static pattern so will never error
         // try to parse each one
-        .map(|path| {
-            parse_one(&path).with_context(|| format!("failed to parse challenge config {}", path))
+        .map(|glob_result| match glob_result {
+            Ok(path) => parse_one(&path)
+                .with_context(|| format!("failed to parse challenge config {:?}", path)),
+            Err(e) => Err(e.into()),
         })
         .collect()
 }
 
-pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
-    trace!("trying to parse {path}");
+pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
+    trace!("trying to parse {path:?}");
 
     // remove 'challenge.yaml' from path
-    let chal_dir = Path::new(path)
-        // pop off leading `./` from SearchBuilder results
-        .strip_prefix("./")?
-        // remove last challenge.yaml
+    let chal_dir = path
         .parent()
         .expect("could not extract path from search path");
 
@@ -49,7 +46,7 @@ pub fn parse_one(path: &str) -> Result<ChallengeConfig> {
         .unwrap();
 
     let parsed = Figment::new()
-        .merge(Yaml::file(path))
+        .merge(Yaml::file(path.clone()))
         // merge in generated data from file path
         .merge(Serialized::default("directory", chal_dir))
         .merge(Serialized::default("category", category))
