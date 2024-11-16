@@ -14,10 +14,10 @@ use void::Void;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 
-pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
+pub fn parse_all() -> Result<Vec<ChallengeConfig>, Vec<Error>> {
     // find all challenge.yaml files
     // only look for paths two entries deep (i.e. always at `<category>/<name>/challenge.yaml`)
-    glob("*/*/challenge.yaml")
+    let (challenges, parse_errors): (Vec<_>, Vec<_>) = glob("*/*/challenge.yaml")
         .unwrap() // static pattern so will never error
         // try to parse each one
         .map(|glob_result| match glob_result {
@@ -25,7 +25,26 @@ pub fn parse_all() -> Vec<Result<ChallengeConfig, Error>> {
                 .with_context(|| format!("failed to parse challenge config {:?}", path)),
             Err(e) => Err(e.into()),
         })
-        .collect()
+        .partition_result();
+
+    trace!(
+        "parsed chals: {:?}",
+        challenges
+            .iter()
+            .map(|c| format!("{}/{}", c.category, c.name))
+            .collect::<Vec<_>>()
+    );
+    debug!(
+        "parsed {} chals, {} others failed parsing",
+        challenges.len(),
+        parse_errors.len()
+    );
+
+    if parse_errors.is_empty() {
+        Ok(challenges)
+    } else {
+        Err(parse_errors)
+    }
 }
 
 pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
