@@ -201,25 +201,13 @@ enum ListOrMap {
 #[fully_pub]
 struct PortConfig {
     internal: i64,
-    expose: PortType,
+    expose: ExposeType,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[serde(untagged)]
+#[serde(rename_all = "lowercase")]
 #[fully_pub]
-enum PortType {
-    Tcp(TcpPort),
-    Http(HttpEndpoint),
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct TcpPort {
-    tcp: i64,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct HttpEndpoint {
-    http: String,
+enum ExposeType {
+    Tcp(i64),
+    Http(String),
 }
