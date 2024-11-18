@@ -25,7 +25,12 @@ pub async fn check(profile_name: &str) -> Result<()> {
     bucket
         .put_object_with_content_type(test_file.0, test_file.1.as_bytes(), "text/plain")
         .await
-        .with_context(|| format!("could not upload to bucket {:?}", profile.s3.bucket_name))?;
+        .with_context(|| {
+            format!(
+                "could not upload to asset bucket {:?}",
+                profile.s3.bucket_name
+            )
+        })?;
 
     // download it to check
     debug!("downloading test file");
@@ -42,13 +47,16 @@ pub async fn check(profile_name: &str) -> Result<()> {
         .await
         .with_context(|| {
             anyhow!(
-                "public download from qbucket {:?} failed",
+                "public download from asset bucket {:?} failed",
                 profile.s3.bucket_name
             )
         })?;
     if from_public.bytes() != test_file.1 {
         bail!("contents of public bucket do not match uploaded file");
     }
+
+    // clean up test file after checks
+    bucket.delete_object(test_file.0).await?;
 
     Ok(())
 }
