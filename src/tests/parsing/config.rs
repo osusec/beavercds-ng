@@ -11,6 +11,7 @@ use crate::configparser::config::*;
 /// Test parsing RCDS config where all fields are specified in the yaml
 fn all_yaml() {
     figment::Jail::expect_with(|jail| {
+        jail.clear_env();
         jail.create_file(
             "rcds.yaml",
             r#"
@@ -124,6 +125,7 @@ fn all_yaml() {
 /// Test parsing RCDS config where some secrets are overridden by envvars
 fn yaml_with_env_overrides() {
     figment::Jail::expect_with(|jail| {
+        jail.clear_env();
         jail.create_file(
             "rcds.yaml",
             r#"
@@ -202,6 +204,7 @@ fn yaml_with_env_overrides() {
 /// Test parsing RCDS config where secrets are set in envvars and omitted from yaml
 fn partial_yaml_with_env() {
     figment::Jail::expect_with(|jail| {
+        jail.clear_env();
         jail.create_file(
             "rcds.yaml",
             r#"
@@ -271,6 +274,7 @@ fn partial_yaml_with_env() {
 /// Test attempting to parse missing config file
 fn bad_no_file() {
     figment::Jail::expect_with(|jail| {
+        jail.clear_env();
         // don't create file
 
         let config = parse();
