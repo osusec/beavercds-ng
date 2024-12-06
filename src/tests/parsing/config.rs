@@ -104,13 +104,13 @@ fn all_yaml() {
                     challenges_domain: "chals.frontend.example".to_string(),
                     kubeconfig: None,
                     kubecontext: "testcluster".to_string(),
-                    // s3: S3Config {
-                    //     bucket_name: "asset_testing".to_string(),
-                    //     endpoint: "s3.example".to_string(),
-                    //     region: "us-fake-1".to_string(),
-                    //     access_key: "accesskey".to_string(),
-                    //     secret_key: "secretkey".to_string(),
-                    // }
+                    s3: S3Config {
+                        bucket_name: "asset_testing".to_string(),
+                        endpoint: "s3.example".to_string(),
+                        region: "us-fake-1".to_string(),
+                        access_key: "accesskey".to_string(),
+                        secret_key: "secretkey".to_string(),
+                    },
                 },
             )]),
         };
@@ -193,8 +193,8 @@ fn yaml_with_env_overrides() {
         let profile = config.profiles.get("testing").unwrap();
 
         assert_eq!(profile.frontend_token, "envtoken");
-        // assert_eq!(profile.s3.access_key, "envkey");
-        // assert_eq!(profile.s3.secret_key, "envsecret");
+        assert_eq!(profile.s3.access_key, "envkey");
+        assert_eq!(profile.s3.secret_key, "envsecret");
 
         Ok(())
     });
@@ -263,8 +263,8 @@ fn partial_yaml_with_env() {
         let profile = config.profiles.get("testing").unwrap();
 
         assert_eq!(profile.frontend_token, "envtoken");
-        // assert_eq!(profile.s3.access_key, "envkey");
-        // assert_eq!(profile.s3.secret_key, "envsecret");
+        assert_eq!(profile.s3.access_key, "envkey");
+        assert_eq!(profile.s3.secret_key, "envsecret");
 
         Ok(())
     });
