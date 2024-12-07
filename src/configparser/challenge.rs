@@ -5,6 +5,7 @@ use fully_pub::fully_pub;
 use glob::glob;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use serde_nested_with::serde_nested;
 use simplelog::*;
 use std::collections::HashMap as Map;
 use std::path::{Path, PathBuf};
@@ -113,6 +114,7 @@ pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
 // ==== Structs for challenge.yaml parsing ====
 //
 
+#[serde_nested]
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
 pub struct ChallengeConfig {
@@ -129,7 +131,9 @@ pub struct ChallengeConfig {
     flag: FlagType,
 
     #[serde(default)]
-    provide: Vec<String>, // optional if no files provided
+    // map deserialize_with to type in vec
+    #[serde_nested(sub = "ProvideConfig", serde(deserialize_with = "string_or_struct"))]
+    provide: Vec<ProvideConfig>, // optional if no files provided
 
     #[serde(default)]
     pods: Vec<Pod>, // optional if no containers used
@@ -172,6 +176,37 @@ struct FileRegex {
 #[fully_pub]
 struct FileVerifier {
     verifier: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[fully_pub]
+struct ProvideConfig {
+    /// The challenge container image where the file should be fetched from,
+    /// based on the names in `pods`. If omitted, the default value is the repo
+    /// challenge directory.
+    #[serde(default)]
+    from: Option<String>,
+
+    /// Rename or create zip file from included files. If only one file is
+    /// included, it is renamed to this value. If multiple files are included,
+    /// they are zipped into an archive with this filename. If this is omitted,
+    /// each file(s) are listed individually with no renaming.
+    #[serde(default, rename = "as")]
+    as_file: Option<String>,
+
+    /// List of files to read from the repo or container. If reading from the
+    /// repo source files, only relative paths are supported.
+    include: Vec<String>,
+}
+impl FromStr for ProvideConfig {
+    type Err = Void;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(ProvideConfig {
+            from: None,
+            as_file: None,
+            include: vec![s.to_string()],
+        })
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
