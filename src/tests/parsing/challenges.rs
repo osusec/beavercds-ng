@@ -187,7 +187,7 @@ fn challenge_no_provides_or_pods() {
 
         let chals = parse_all().unwrap();
 
-        assert_eq!(chals[0].provide, vec![] as Vec<String>);
+        assert_eq!(chals[0].provide, vec![] as Vec<ProvideConfig>);
         assert_eq!(chals[0].pods, vec![] as Vec<Pod>);
 
         Ok(())
@@ -212,7 +212,24 @@ fn challenge_provide() {
 
             provide:
                 - foo.txt
-                - bar.jpg
+                - include:
+                    - bar.txt
+                    - baz.txt
+
+                - as: stuff.zip
+                  include:
+                    - ducks
+                    - beavers
+
+                - from: container
+                  include:
+                    - /foo/bar
+
+                - from: container
+                  as: shells.zip
+                  include:
+                    - /usr/bin/bash
+                    - /usr/bin/zsh
         "#,
         )?;
 
@@ -220,8 +237,64 @@ fn challenge_provide() {
 
         assert_eq!(
             chals[0].provide,
-            vec!["foo.txt".to_string(), "bar.jpg".to_string()],
+            vec![
+                ProvideConfig {
+                    from: None,
+                    as_file: None,
+                    include: vec!["foo.txt".to_string()]
+                },
+                ProvideConfig {
+                    from: None,
+                    as_file: None,
+                    include: vec!["bar.txt".to_string(), "baz.txt".to_string()]
+                },
+                ProvideConfig {
+                    from: None,
+                    as_file: Some("stuff.zip".to_string()),
+                    include: vec!["ducks".to_string(), "beavers".to_string()]
+                },
+                ProvideConfig {
+                    from: Some("container".to_string()),
+                    as_file: None,
+                    include: vec!["/foo/bar".to_string()]
+                },
+                ProvideConfig {
+                    from: Some("container".to_string()),
+                    as_file: Some("shells.zip".to_string()),
+                    include: vec!["/usr/bin/bash".to_string(), "/usr/bin/zsh".to_string()]
+                }
+            ],
         );
+
+        Ok(())
+    })
+}
+
+#[test]
+/// Challenge provide files dont parse if include is missing from object form
+fn challenge_provide_no_include() {
+    figment::Jail::expect_with(|jail| {
+        let dir = jail.create_dir("foo/test")?;
+        jail.create_file(
+            dir.join("challenge.yaml"),
+            r#"
+            name: testchal
+            author: nobody
+            description: just a test challenge
+            difficulty: 1
+
+            flag:
+                text: test{it-works}
+
+            provide:
+                - as: bad.zip
+        "#,
+        )?;
+
+        let chals = parse_all();
+        assert!(chals.is_err());
+        let errs = chals.unwrap_err();
+        assert_eq!(errs.len(), 1);
 
         Ok(())
     })

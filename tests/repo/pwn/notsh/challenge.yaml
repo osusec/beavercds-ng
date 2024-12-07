@@ -6,7 +6,11 @@ description: |-
   `nc {{host}} {{port}}`
 
 provide:
-- ./notsh.zip
+  - from: main
+    as: notsh.zip
+    include:
+      - /chal/notsh
+      - /lib/x86_64-linux-gnu/libc.so.6
 
 flag:
   file: ./flag

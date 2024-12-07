@@ -11,11 +11,13 @@ itertools = "0.12.1"
 glob = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0.0.12"
+serde_nested_with = "0.2.5"
 tera = "1.19.1"
 simplelog = { version = "0.12.2", features = ["paris"] }
 fully_pub = "0.1.4"
 void = "1"
 futures-util = "0.3.30"
+figment = { version = "0.10.19", features = ["env", "yaml", "test"] }
 
 # kubernetes:
 kube = { version = "0.91.0", features = ["runtime", "derive"] }
@@ -26,7 +28,6 @@ tokio = { version = "1.38.0", features = ["rt", "macros"] }
 bollard = "0.16.1"
 tar = "0.4.42"
 tempfile = "3.13.0"
-figment = { version = "0.10.19", features = ["env", "yaml", "test"] }
 rust-s3 = { version = "0.35.1", default-features = false, features = [
   "fail-on-err",
   "tokio-rustls-tls",
