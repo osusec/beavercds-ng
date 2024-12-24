@@ -7,6 +7,7 @@ pub use challenge::ChallengeConfig; // reexport
 pub use config::UserPass; // reexport
 use itertools::Itertools;
 use simplelog::*;
+use std::path::Path;
 use std::sync::OnceLock;
 
 // todo: replace with std::LazyLock once v1.80 is out?
@@ -55,4 +56,23 @@ pub fn get_challenges() -> Result<ChallengeConfigs, Vec<Error>> {
     let chals = challenge::parse_all();
 
     chals.map(|c| CHALLENGES.get_or_init(|| c))
+}
+
+/// Get all enabled challenges for profile
+pub fn enabled_challenges(profile_name: &str) -> Result<Vec<&ChallengeConfig>> {
+    let config = get_config()?;
+    let challenges = get_challenges().unwrap();
+    let deploy = &get_profile_deploy(profile_name)?.challenges;
+
+    let enabled = deploy
+        .iter()
+        .filter_map(|(chal_path, enabled)| match enabled {
+            true => challenges
+                .iter()
+                .find(|c| c.directory == Path::new(chal_path)),
+            false => None,
+        })
+        .collect();
+
+    Ok(enabled)
 }
