@@ -41,9 +41,10 @@ fn main() {
             profile,
             push,
             no_push,
+            extract_assets,
         } => {
             commands::validate::run();
-            commands::build::run(profile, &!no_push)
+            commands::build::run(profile, &!no_push, extract_assets)
         }
 
         cli::Commands::Deploy {

@@ -13,7 +13,8 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Build all challenge container images, optionally pushing them to the configured registry.
+    /// Build all challenge container images, optionally pushing them to the
+    /// configured registry and extracting build artifacts.
     ///
     /// Images are tagged as <registry>/<chal>-<container>:<profile>.
     Build {
@@ -25,15 +26,21 @@ pub enum Commands {
         push: bool,
 
         /// Don't push container images to registry
+        // TODO: this is hacky. revisit when automatic negation flags are
+        // implemented: https://github.com/clap-rs/clap/issues/815
         #[arg(long, default_value = "false")]
         no_push: bool,
-        // TODO: this is hacky. revisit when automatic negation flags are implemented:
-        // https://github.com/clap-rs/clap/issues/815
+
+        /// Extract build assets to challenge source directory
+        #[arg(long, default_value = "true")]
+        extract_assets: bool,
     },
 
-    /// Deploy enabled challenges to cluster, updating any backing resources as necessary.
+    /// Deploy enabled challenges to cluster, updating any backing resources as
+    /// necessary.
     ///
-    /// Also builds and pushes images to registry, unless --no-build is specified.
+    /// Also builds and pushes images to registry, unless --no-build is
+    /// specified.
     Deploy {
         /// Deployment profile
         #[arg(short, long, value_name = "PROFILE")]
