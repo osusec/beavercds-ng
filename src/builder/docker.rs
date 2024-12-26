@@ -11,11 +11,12 @@ use futures::{StreamExt, TryStreamExt};
 use simplelog::*;
 use std::fs::File;
 use std::io::{Seek, Write};
+use std::path::PathBuf;
 use std::sync::LazyLock;
 use std::{fs, io};
 use std::{io::Read, path::Path};
 use tar;
-use tempfile::{tempdir_in, tempfile};
+use tempfile::tempdir;
 use tokio;
 
 use crate::configparser::challenge::BuildObject;
@@ -147,53 +148,47 @@ pub async fn remove_container(name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn copy_file(
-    container_id: &str,
-    from_path: &str,
-    rename_to: Option<&str>,
-) -> Result<String> {
+pub async fn copy_file(container_id: &str, from: &Path, to: &Path) -> Result<PathBuf> {
+    info!("copying {container_id}:{from:?} to {to:?}");
+
     let client = client().await?;
 
-    // if no rename is given, use basename of `from` as target path
-    let target_path = match rename_to {
-        Some(to) => to,
-        None => Path::new(from_path).file_name().unwrap().to_str().unwrap(),
-    };
-
-    info!("copying {container_id}:{from_path} to {target_path}");
+    let from_basename = from.file_name().unwrap();
 
     // Download single file from container in an archive
-    let opts = DownloadFromContainerOptions { path: from_path };
+    let opts = DownloadFromContainerOptions {
+        path: from.to_string_lossy(),
+    };
     let mut dl_stream = client.download_from_container(container_id, Some(opts));
 
-    // scratch dir in chal repo (two vars for scoping reasons)
-    // let mut tempdir_full = tempdir_in(".")?;
-    // let tempdir = tempdir_full.path();
-
-    fs::create_dir("./.tempdir");
-    let tempdir = Path::new("./.tempdir");
+    let mut tempdir = tempdir()?;
+    let tarpath = tempdir
+        .path()
+        .join(format!("download_{}.tar", from_basename.to_string_lossy()));
 
     // collect byte stream chunks into full file
-    let mut tarfile = File::create(tempdir.join(format!("download_{target_path}.tar")))?;
+    let mut tarfile = File::create(&tarpath)?;
     while let Some(chunk) = dl_stream.next().await {
         tarfile.write_all(&chunk?)?;
     }
-    tarfile.rewind();
 
     // unpack file retrieved to temp dir
-    trace!("extracting download tar to {:?}", tempdir);
-    let mut tar = tar::Archive::new(tarfile);
+    trace!("extracting download tar to {:?}", tarpath);
+    // need to create new File here since tar library chokes when rewinding existing `tarfile` File
+    let mut tar = tar::Archive::new(File::open(&tarpath)?);
 
     // extract single file from archive to disk
     // we only copied out one file, so this tar should only have one file
-    if let Some(Ok(mut entry)) = tar.entries()?.next() {
-        let mut target = File::create_new(target_path)?;
-        io::copy(&mut entry, &mut target);
+    if let Some(mut entry_r) = tar.entries()?.next() {
+        let mut entry = entry_r?;
+        trace!("got entry: {:?}", entry.path());
+        let mut target = File::create(to)?;
+        io::copy(&mut entry, &mut target)?;
     } else {
-        bail!("downloaded archive for {container_id}:{from_path} has no files in it!");
+        bail!("downloaded archive for {container_id}:{from:?} has no files in it!");
     }
 
-    Ok(target_path.to_string())
+    Ok(to.to_path_buf())
 }
 
 //
