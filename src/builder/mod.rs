@@ -130,7 +130,12 @@ fn build_challenge(
                 );
                 let container = docker::create_container(&tag, &name)?;
 
-                let asset_result = extract_asset(p, &container);
+                let asset_result = extract_asset(chal, p, &container).with_context(|| {
+                    format!(
+                        "failed to extract build artifacts for chal {:?}",
+                        chal.directory,
+                    )
+                });
 
                 // clean up container even if it failed
                 docker::remove_container(&name)?;
@@ -140,7 +145,7 @@ fn build_challenge(
             .flatten_ok()
             .collect::<Result<Vec<_>>>()?;
 
-        debug!("Extracted assets: {:?}", assets);
+        debug!("extracted assets: {:?}", assets);
     }
     Ok(built_tags)
 }
