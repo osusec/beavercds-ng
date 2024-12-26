@@ -4,7 +4,7 @@ use bollard::{
     image::{CreateImageOptions, PushImageOptions, TagImageOptions},
     Docker,
 };
-use futures_util::{StreamExt, TryStreamExt};
+use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
 use simplelog::*;
 use tokio;

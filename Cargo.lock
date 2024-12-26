@@ -264,7 +264,7 @@ dependencies = [
  "clap-verbosity-flag",
  "figment",
  "fully_pub",
- "futures-util",
+ "futures",
  "glob",
  "itertools",
  "k8s-openapi",
