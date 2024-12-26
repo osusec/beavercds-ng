@@ -31,7 +31,7 @@ pub enum Commands {
         #[arg(long, default_value = "false")]
         no_push: bool,
 
-        /// Extract build assets to challenge source directory
+        /// Extract build assets to challenge source directory (default: true)
         #[arg(long, default_value = "true")]
         extract_assets: bool,
     },
