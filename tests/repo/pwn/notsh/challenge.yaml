@@ -12,6 +12,12 @@ provide:
       - /chal/notsh
       - /lib/x86_64-linux-gnu/libc.so.6
 
+  # also extract individually for testing
+  - from: main
+    include:
+      - /chal/notsh
+      - /lib/x86_64-linux-gnu/libc.so.6
+
 flag:
   file: ./flag
 
