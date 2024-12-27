@@ -94,6 +94,8 @@ fn build_challenge(
     }
 
     if extract_artifacts {
+        info!("extracting build artifacts for chal {:?}", chal.directory);
+
         // find the matching tag for Provide entries that have a `from:` source
         let image_assoc = chal
             .provide
@@ -113,12 +115,6 @@ fn build_challenge(
                 })
             })
             .collect_vec();
-
-        debug!(
-            "extracting {} build artifacts for chal {:?}",
-            image_assoc.len(),
-            chal.directory
-        );
 
         let assets = image_assoc
             .into_iter()
@@ -145,44 +141,7 @@ fn build_challenge(
             .flatten_ok()
             .collect::<Result<Vec<_>>>()?;
 
-        debug!("extracted assets: {:?}", assets);
+        info!("extracted artifacts: {:?}", assets);
     }
     Ok(built_tags)
 }
-
-// /// Push passed tags to registry
-// pub fn push_tags(tags: Vec<String>) -> Result<Vec<String>> {
-//     let config = get_config()?;
-
-//     let built_tags = tags
-//         .iter()
-//         .map(|tag| {
-//             push_image(tag, &config.registry.build)
-//                 .with_context(|| format!("error pushing image {tag}"))
-//         })
-//         .collect::<Result<_>>()?;
-
-//     Ok(built_tags)
-// }
-
-// /// Extract any assets needed from given challenges
-// pub fn extract_assets(
-//     profile_name: &str,
-//     built_chals: Vec<&ChallengeConfig>,
-// ) -> Result<Vec<String>> {
-//     built_chals.iter().map(|chal| {
-//         chal.provide.iter().filter(|p| p.from.is_some()).map(|p| {
-//             assets::extract_asset(p, container)
-//         })
-
-//         // let tag = format!(
-//         //     image_tag!(),
-//         //     registry = config.registry.domain,
-//         //     challenge = chal.name,
-//         //     container = p.name,
-//         //     profile = profile_name
-//         // );
-//     });
-
-//     Ok(vec![])
-// }
