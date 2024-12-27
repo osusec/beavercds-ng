@@ -149,7 +149,7 @@ pub async fn remove_container(name: &str) -> Result<()> {
 }
 
 pub async fn copy_file(container_id: &str, from: PathBuf, to: PathBuf) -> Result<PathBuf> {
-    debug!("copying {container_id}:{from:?} to {to:?}");
+    trace!("copying {container_id}:{from:?} to {to:?}");
 
     let client = client().await?;
 
