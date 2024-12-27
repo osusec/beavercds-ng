@@ -2,9 +2,13 @@ use anyhow::{anyhow, Context, Error, Result};
 use futures::future::try_join_all;
 use itertools::Itertools;
 use simplelog::{debug, trace};
+use std::fs::File;
+use std::io::{BufReader, Read, Write};
 use std::path::{Path, PathBuf};
+use tempfile::tempdir_in;
+use zip;
 
-use crate::builder::docker::{client, copy_file, create_container};
+use crate::builder::docker;
 use crate::configparser::challenge::{ChallengeConfig, ProvideConfig};
 
 /// extract assets from given container name and provide config to challenge directory, return file path(s) extracted
@@ -45,7 +49,7 @@ async fn extract_files(
     container: &str,
     files: &Vec<String>,
 ) -> Result<Vec<PathBuf>> {
-    trace!(
+    debug!(
         "extracting {} files without renaming: {:?}",
         files.len(),
         files
@@ -53,13 +57,13 @@ async fn extract_files(
 
     try_join_all(files.iter().map(|f| {
         let from = PathBuf::from(f);
-        let to = chal
-            .directory
-            .join(from.file_name().unwrap().to_str().unwrap());
+        // use basename of source file as target name
+        let to = chal.directory.join(from.file_name().unwrap());
 
-        copy_file(container, from, to)
+        docker::copy_file(container, from, to)
     }))
     .await
+    .context("could not copy files from container")
 }
 
 /// Extract one file from container and rename
@@ -69,9 +73,13 @@ async fn extract_rename(
     file: &str,
     new_name: &str,
 ) -> Result<Vec<PathBuf>> {
-    trace!("extracting file and renaming it");
+    debug!("extracting file {:?} renamed to {:?}", file, new_name);
 
-    Ok(vec![])
+    let new_file = docker::copy_file(container, PathBuf::from(file), PathBuf::from(new_name))
+        .await
+        .context("could not copy file from container")?;
+
+    Ok(vec![new_file])
 }
 
 /// Extract one or more file from container as archive
@@ -81,7 +89,39 @@ async fn extract_archive(
     files: &Vec<String>,
     archive_name: &str,
 ) -> Result<Vec<PathBuf>> {
-    trace!("extracting mutliple files into archive");
+    debug!(
+        "extracting {} files {:?} into archive {:?}",
+        files.len(),
+        files,
+        archive_name
+    );
 
-    Ok(vec![])
+    // copy all listed files to tempdir
+    let tempdir = tempdir_in(".")?;
+    let copied_files = try_join_all(files.iter().map(|f| {
+        let from = PathBuf::from(f);
+        let to = tempdir.path().join(from.file_name().unwrap());
+
+        docker::copy_file(container, from, to)
+    }))
+    .await
+    .context("could not copy files from container")?;
+
+    // write them all to new zip
+    let zipfile = File::create(chal.directory.join(archive_name))?;
+    let mut z = zip::ZipWriter::new(zipfile);
+    let opts = zip::write::SimpleFileOptions::default();
+
+    let mut buf = vec![];
+    for path in copied_files.into_iter() {
+        trace!("adding {:?} to zip", &path);
+        File::open(&path)?.read_to_end(&mut buf)?;
+        z.start_file(path.to_string_lossy(), opts)?;
+        z.write_all(&buf)?;
+        buf.clear();
+    }
+
+    z.finish();
+
+    Ok(vec![chal.directory.join(archive_name)])
 }
