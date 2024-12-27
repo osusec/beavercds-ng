@@ -51,28 +51,15 @@ async fn extract_files(
         files
     );
 
-    // try_join_all(
-    //     files
-    //         .iter()
-    //         .enumerate() // need index to avoid copy collisions
-    //         .map(|(i, f)| docker::copy_file(container, f, None)),
-    // )
-    // .await
-
-    let mut results = vec![];
-
-    for f in files.iter() {
-        let from = Path::new(f);
-        // if no rename is given, use basename of `from` as target path
-        // these files should go in chal directory, so pass it in
+    try_join_all(files.iter().map(|f| {
+        let from = PathBuf::from(f);
         let to = chal
             .directory
             .join(from.file_name().unwrap().to_str().unwrap());
 
-        results.push(copy_file(container, from, &to).await?);
-    }
-
-    Ok(results)
+        copy_file(container, from, to)
+    }))
+    .await
 }
 
 /// Extract one file from container and rename

@@ -148,8 +148,8 @@ pub async fn remove_container(name: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn copy_file(container_id: &str, from: &Path, to: &Path) -> Result<PathBuf> {
-    info!("copying {container_id}:{from:?} to {to:?}");
+pub async fn copy_file(container_id: &str, from: PathBuf, to: PathBuf) -> Result<PathBuf> {
+    debug!("copying {container_id}:{from:?} to {to:?}");
 
     let client = client().await?;
 
@@ -182,7 +182,7 @@ pub async fn copy_file(container_id: &str, from: &Path, to: &Path) -> Result<Pat
     if let Some(mut entry_r) = tar.entries()?.next() {
         let mut entry = entry_r?;
         trace!("got entry: {:?}", entry.path());
-        let mut target = File::create(to)?;
+        let mut target = File::create(&to)?;
         io::copy(&mut entry, &mut target)?;
     } else {
         bail!("downloaded archive for {container_id}:{from:?} has no files in it!");
