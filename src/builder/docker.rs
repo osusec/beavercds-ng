@@ -16,7 +16,7 @@ use std::sync::LazyLock;
 use std::{fs, io};
 use std::{io::Read, path::Path};
 use tar;
-use tempfile::tempdir;
+use tempfile::Builder;
 use tokio;
 
 use crate::configparser::challenge::BuildObject;
@@ -161,21 +161,16 @@ pub async fn copy_file(container_id: &str, from: PathBuf, to: PathBuf) -> Result
     };
     let mut dl_stream = client.download_from_container(container_id, Some(opts));
 
-    let mut tempdir = tempdir()?;
-    let tarpath = tempdir
-        .path()
-        .join(format!("download_{}.tar", from_basename.to_string_lossy()));
-
     // collect byte stream chunks into full file
-    let mut tarfile = File::create(&tarpath)?;
+    let mut temptar = Builder::new().suffix(".tar").tempfile_in(".")?;
     while let Some(chunk) = dl_stream.next().await {
-        tarfile.write_all(&chunk?)?;
+        temptar.as_file_mut().write_all(&chunk?)?;
     }
 
     // unpack file retrieved to temp dir
-    trace!("extracting download tar to {:?}", tarpath);
+    trace!("extracting download tar to {:?}", temptar.path());
     // need to create new File here since tar library chokes when rewinding existing `tarfile` File
-    let mut tar = tar::Archive::new(File::open(&tarpath)?);
+    let mut tar = tar::Archive::new(File::open(temptar.path())?);
 
     // extract single file from archive to disk
     // we only copied out one file, so this tar should only have one file
