@@ -22,6 +22,11 @@ use tokio;
 use crate::configparser::challenge::BuildObject;
 use crate::configparser::UserPass;
 
+pub struct ContainerInfo {
+    pub name: String,
+    id: String,
+}
+
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Result<String> {
     trace!("building image in directory {context:?} to tag {tag:?}");
@@ -117,7 +122,7 @@ pub async fn push_image(image_tag: &str, creds: &UserPass) -> Result<String> {
 }
 
 #[tokio::main(flavor = "current_thread")] // make this a sync function
-pub async fn create_container(image_tag: &str, name: &str) -> Result<String> {
+pub async fn create_container(image_tag: &str, name: &str) -> Result<ContainerInfo> {
     debug!("creating container {name:?} from image {image_tag:?}");
     let client = client().await?;
 
@@ -131,25 +136,28 @@ pub async fn create_container(image_tag: &str, name: &str) -> Result<String> {
     };
 
     let container = client.create_container(Some(opts), config).await?;
-    Ok(container.id)
+    Ok(ContainerInfo {
+        id: container.id,
+        name: name.to_string(),
+    })
 }
 
 #[tokio::main(flavor = "current_thread")] // make this a sync function
-pub async fn remove_container(name: &str) -> Result<()> {
-    debug!("removing container {name:?}");
+pub async fn remove_container(container: ContainerInfo) -> Result<()> {
+    debug!("removing container {}", &container.name);
     let client = client().await?;
 
     let opts = RemoveContainerOptions {
         force: true,
         ..Default::default()
     };
-    client.remove_container(name, Some(opts)).await?;
+    client.remove_container(&container.name, Some(opts)).await?;
 
     Ok(())
 }
 
-pub async fn copy_file(container_id: &str, from: PathBuf, to: PathBuf) -> Result<PathBuf> {
-    trace!("copying {container_id}:{from:?} to {to:?}");
+pub async fn copy_file(container: &ContainerInfo, from: PathBuf, to: PathBuf) -> Result<PathBuf> {
+    trace!("copying {}:{from:?} to {to:?}", container.name);
 
     let client = client().await?;
 
@@ -159,7 +167,18 @@ pub async fn copy_file(container_id: &str, from: PathBuf, to: PathBuf) -> Result
     let opts = DownloadFromContainerOptions {
         path: from.to_string_lossy(),
     };
-    let mut dl_stream = client.download_from_container(container_id, Some(opts));
+    let mut dl_stream = client
+        .download_from_container(&container.id, Some(opts))
+        .map(|c| {
+            c.with_context(|| {
+                format!(
+                    "could not copy file {}:{} to {}",
+                    &container.name,
+                    from.to_string_lossy(),
+                    to.to_string_lossy()
+                )
+            })
+        });
 
     // collect byte stream chunks into full file
     let mut temptar = Builder::new().suffix(".tar").tempfile_in(".")?;
@@ -180,7 +199,10 @@ pub async fn copy_file(container_id: &str, from: PathBuf, to: PathBuf) -> Result
         let mut target = File::create(&to)?;
         io::copy(&mut entry, &mut target)?;
     } else {
-        bail!("downloaded archive for {container_id}:{from:?} has no files in it!");
+        bail!(
+            "downloaded archive for {}:{from:?} has no files in it!",
+            container.name
+        );
     }
 
     Ok(to.to_path_buf())

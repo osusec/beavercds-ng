@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Error, Result};
 use futures::future::try_join_all;
+use futures::FutureExt;
 use itertools::Itertools;
 use simplelog::{debug, trace};
 use std::fs::File;
@@ -16,9 +17,9 @@ use crate::configparser::challenge::{ChallengeConfig, ProvideConfig};
 pub async fn extract_asset(
     chal: &ChallengeConfig,
     provide: &ProvideConfig,
-    container: &str,
+    container: &docker::ContainerInfo,
 ) -> Result<Vec<PathBuf>> {
-    debug!("extracting assets from container {}", container);
+    debug!("extracting assets from container {}", &container.name);
     // This needs to handle three cases:
     // - single or multiple files without renaming (no as: field)
     // - single file with rename (one item with as:)
@@ -46,7 +47,7 @@ pub async fn extract_asset(
 /// Extract multiple files from container
 async fn extract_files(
     chal: &ChallengeConfig,
-    container: &str,
+    container: &docker::ContainerInfo,
     files: &Vec<String>,
 ) -> Result<Vec<PathBuf>> {
     debug!(
@@ -63,21 +64,19 @@ async fn extract_files(
         docker::copy_file(container, from, to)
     }))
     .await
-    .context("could not copy files from container")
 }
 
 /// Extract one file from container and rename
 async fn extract_rename(
     chal: &ChallengeConfig,
-    container: &str,
+    container: &docker::ContainerInfo,
     file: &str,
     new_name: &str,
 ) -> Result<Vec<PathBuf>> {
     debug!("extracting file {:?} renamed to {:?}", file, new_name);
 
-    let new_file = docker::copy_file(container, PathBuf::from(file), PathBuf::from(new_name))
-        .await
-        .context("could not copy file from container")?;
+    let new_file =
+        docker::copy_file(container, PathBuf::from(file), PathBuf::from(new_name)).await?;
 
     Ok(vec![new_file])
 }
@@ -85,7 +84,7 @@ async fn extract_rename(
 /// Extract one or more file from container as archive
 async fn extract_archive(
     chal: &ChallengeConfig,
-    container: &str,
+    container: &docker::ContainerInfo,
     files: &Vec<String>,
     archive_name: &str,
 ) -> Result<Vec<PathBuf>> {
@@ -104,8 +103,7 @@ async fn extract_archive(
 
         docker::copy_file(container, from, to)
     }))
-    .await
-    .context("could not copy files from container")?;
+    .await?;
 
     // write them all to new zip
     let zipfile = File::create(chal.directory.join(archive_name))?;

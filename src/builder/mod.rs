@@ -128,13 +128,14 @@ fn build_challenge(
 
                 let asset_result = extract_asset(chal, p, &container).with_context(|| {
                     format!(
-                        "failed to extract build artifacts for chal {:?}",
+                        "failed to extract build artifacts for chal {:?} container {:?}",
                         chal.directory,
+                        p.from.clone().unwrap()
                     )
                 });
 
                 // clean up container even if it failed
-                docker::remove_container(&name)?;
+                docker::remove_container(container)?;
 
                 asset_result
             })
