@@ -1,6 +1,5 @@
 use anyhow::{Context, Error, Result};
 use itertools::Itertools;
-use simplelog::info;
 use simplelog::*;
 use std::process::exit;
 

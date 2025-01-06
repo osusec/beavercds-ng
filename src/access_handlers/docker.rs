@@ -9,7 +9,7 @@ use itertools::Itertools;
 use simplelog::*;
 use tokio;
 
-use crate::builder::docker::client;
+use crate::clients::docker;
 use crate::configparser::{get_config, get_profile_config};
 
 /// container registry / daemon access checks
@@ -22,7 +22,7 @@ pub async fn check(profile_name: &str) -> Result<()> {
     let profile = get_profile_config(profile_name)?;
     let registry_config = &get_config()?.registry;
 
-    let client = client()
+    let client = docker()
         .await
         // truncate error chain with new error (returned error is way too verbose)
         .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;

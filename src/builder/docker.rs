@@ -19,6 +19,7 @@ use tar;
 use tempfile::Builder;
 use tokio;
 
+use crate::clients::docker;
 use crate::configparser::challenge::BuildObject;
 use crate::configparser::UserPass;
 
@@ -30,7 +31,7 @@ pub struct ContainerInfo {
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Result<String> {
     trace!("building image in directory {context:?} to tag {tag:?}");
-    let client = client().await?;
+    let client = docker().await?;
 
     let build_opts = BuildImageOptions {
         dockerfile: options.dockerfile.clone(),
@@ -86,7 +87,7 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn push_image(image_tag: &str, creds: &UserPass) -> Result<String> {
     info!("pushing image {image_tag:?} to registry");
-    let client = client().await?;
+    let client = docker().await?;
 
     let (image, tag) = image_tag
         .rsplit_once(":")
@@ -124,7 +125,7 @@ pub async fn push_image(image_tag: &str, creds: &UserPass) -> Result<String> {
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn create_container(image_tag: &str, name: &str) -> Result<ContainerInfo> {
     debug!("creating container {name:?} from image {image_tag:?}");
-    let client = client().await?;
+    let client = docker().await?;
 
     let opts = CreateContainerOptions {
         name: name.to_string(),
@@ -145,7 +146,7 @@ pub async fn create_container(image_tag: &str, name: &str) -> Result<ContainerIn
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn remove_container(container: ContainerInfo) -> Result<()> {
     debug!("removing container {}", &container.name);
-    let client = client().await?;
+    let client = docker().await?;
 
     let opts = RemoveContainerOptions {
         force: true,
@@ -159,7 +160,7 @@ pub async fn remove_container(container: ContainerInfo) -> Result<()> {
 pub async fn copy_file(container: &ContainerInfo, from: PathBuf, to: PathBuf) -> Result<PathBuf> {
     trace!("copying {}:{from:?} to {to:?}", container.name);
 
-    let client = client().await?;
+    let client = docker().await?;
 
     let from_basename = from.file_name().unwrap();
 
@@ -206,44 +207,4 @@ pub async fn copy_file(container: &ContainerInfo, from: PathBuf, to: PathBuf) ->
     }
 
     Ok(to.to_path_buf())
-}
-
-//
-// helper functions
-//
-
-// connect to Docker/Podman daemon once and share client
-static CLIENT: LazyLock<std::result::Result<Docker, bollard::errors::Error>> =
-    LazyLock::new(|| {
-        debug!("connecting to docker...");
-        Docker::connect_with_defaults()
-    });
-pub async fn client() -> Result<Docker> {
-    let c = CLIENT
-        .as_ref()
-        .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;
-    c.ping().await?;
-
-    Ok(c.clone())
-}
-
-#[derive(Debug)]
-pub enum EngineType {
-    Docker,
-    Podman,
-}
-pub async fn engine_type() -> EngineType {
-    let c = client().await.unwrap();
-    let version = c.version().await.unwrap();
-
-    if version
-        .components
-        .unwrap()
-        .iter()
-        .any(|c| c.name == "Podman Engine")
-    {
-        EngineType::Podman
-    } else {
-        EngineType::Docker
-    }
 }

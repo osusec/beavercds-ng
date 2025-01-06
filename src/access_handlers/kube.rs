@@ -7,6 +7,7 @@ use kube;
 use simplelog::*;
 use tokio;
 
+use crate::clients::kube_client;
 use crate::configparser::{config, get_config, get_profile_config};
 
 /// kubernetes access checks
@@ -19,7 +20,7 @@ pub async fn check(profile_name: &str) -> Result<()> {
     // b) have the right permissions (a la `kubectl auth can-i`)
 
     // build a client
-    let client = client(profile).await?;
+    let client = kube_client(profile).await?;
 
     // try to get cluster info (whoami)
     let reviewapi: kube::Api<SelfSubjectReview> = kube::Api::all(client);
@@ -48,30 +49,4 @@ pub async fn check(profile_name: &str) -> Result<()> {
     // todo:? check what permissions we have and error if we are missing any
 
     return Ok(());
-}
-
-/// Returns K8S Client for selected profile
-async fn client(profile: &config::ProfileConfig) -> Result<kube::Client> {
-    debug!("building kube client");
-
-    // read in kubeconfig from given kubeconfig (or default)
-    // (use kube::Config to specify context)
-    let options = kube::config::KubeConfigOptions {
-        context: Some(profile.kubecontext.to_owned()),
-        cluster: None,
-        user: None,
-    };
-
-    let client_config = match &profile.kubeconfig {
-        Some(kc_path) => {
-            let kc = kube::config::Kubeconfig::read_from(kc_path)?;
-            kube::Config::from_custom_kubeconfig(kc, &options).await?
-        }
-        None => kube::Config::from_kubeconfig(&options).await?,
-    };
-
-    // client::try_from returns a Result, but the Error is not compatible
-    // with anyhow::Error, so assign this with ? and return Ok() separately
-    let client = kube::Client::try_from(client_config)?;
-    Ok(client)
 }
