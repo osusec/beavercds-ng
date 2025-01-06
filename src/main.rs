@@ -55,5 +55,9 @@ fn main() {
             commands::validate::run();
             commands::deploy::run(profile, no_build, dry_run)
         }
+
+        cli::Commands::ClusterSetup { profile } => {
+            commands::cluster_setup::run(profile);
+        }
     }
 }

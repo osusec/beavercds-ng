@@ -58,7 +58,7 @@ pub enum Commands {
     /// Validate contents of rcds.yaml and any challenge.yaml files.
     Validate, // no args
 
-    /// Checks access to various frontend/backend components.
+    /// Check access to various frontend/backend components.
     CheckAccess {
         /// Deployment profile to check
         #[arg(short, long, value_name = "PROFILE", default_value = "all")]
@@ -78,5 +78,12 @@ pub enum Commands {
 
         #[arg(short, long, help = "Check S3 asset bucket access and permissions")]
         bucket: bool,
+    },
+
+    /// Set up required cluster resources (ingress, cert-manager, etc)
+    ClusterSetup {
+        /// Deployment profile to use
+        #[arg(short, long, value_name = "PROFILE")]
+        profile: String,
     },
 }
