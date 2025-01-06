@@ -24,6 +24,11 @@ zip = { version = "2.2.2", default-features = false, features = ["deflate"] }
 kube = { version = "0.91.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.22.0", features = ["latest"] }
 tokio = { version = "1.38.0", features = ["rt", "macros"] }
+reqwest = { version = "0.12", default-features = false, features = [
+  "http2",
+  "rustls-tls",
+] }
+http = { version = "1.2", default-features = false }
 
 # docker:
 bollard = "0.16.1"

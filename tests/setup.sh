@@ -19,7 +19,7 @@ start_stuff (){
   $(dockpod) compose -f $COMPOSE_FILE up -d
 
   # export variables if sourced or echo them if run
-  export BEAVERCDS_REGISTRY_DOMAIN="host.minikube.internal:5000/testing"
+  export BEAVERCDS_REGISTRY_DOMAIN="localhost:5000/testing"
   export BEAVERCDS_PROFILES_TESTING_KUBECONTEXT="$MINIKUBE_PROFILE"
   export BEAVERCDS_PROFILES_TESTING_S3_ENDPOINT="http://localhost:9000"
   export BEAVERCDS_PROFILES_TESTING_S3_REGION=""

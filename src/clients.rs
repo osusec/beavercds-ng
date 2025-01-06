@@ -2,7 +2,13 @@
 
 use anyhow::{anyhow, bail, Ok, Result};
 use bollard;
-use kube;
+use futures::TryFutureExt;
+use kube::{
+    self,
+    api::{DynamicObject, GroupVersionKind, TypeMeta},
+    core::ResourceExt,
+    discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
+};
 use simplelog::*;
 
 use crate::configparser::config;
@@ -67,8 +73,54 @@ pub async fn kube_client(profile: &config::ProfileConfig) -> Result<kube::Client
         None => kube::Config::from_kubeconfig(&options).await?,
     };
 
-    // client::try_from returns a Result, but the Error is not compatible
-    // with anyhow::Error, so assign this with ? and return Ok() separately
     let client = kube::Client::try_from(client_config)?;
+
+    // check kube api readiness endpoint to make sure its reachable
+    let ready_req = http::Request::get("/readyz").body(vec![]).unwrap();
+    if client.request_text(ready_req).await.map_err(|e| {
+        // change 'Connection refused' error into something more helpful
+        // anyhow!("could not connect to Kubernetes (is KUBECONFIG or KUBECONTEXT correct?)")
+        e
+    })? != "ok"
+    {
+        bail!("kubernetes is not ready")
+    };
+
     Ok(client)
+}
+
+/// Create a Kube API client for the passed object's resource type
+pub async fn kube_api_for(
+    kube_object: &DynamicObject,
+    client: kube::Client,
+) -> Result<kube::Api<DynamicObject>> {
+    let ns = kube_object.metadata.namespace.as_deref();
+
+    let gvk = if let Some(tm) = &kube_object.types {
+        GroupVersionKind::try_from(tm)?
+    } else {
+        bail!(
+            "cannot apply object without valid TypeMeta {:?}",
+            kube_object
+        );
+    };
+
+    let name = kube_object.name_any();
+    let (resource, caps) = kube::discovery::pinned_kind(&client, &gvk)
+        .await
+        // .with_context(|| {
+        //     format!(
+        //         "could not find resource type {:?} on cluster",
+        //         kube_object.types.unwrap_or(TypeMeta::default())
+        //     )
+        // })
+        ?;
+
+    if caps.scope == kube::discovery::Scope::Cluster {
+        Ok(kube::Api::all_with(client, &resource))
+    } else if let Some(namespace) = ns {
+        Ok(kube::Api::namespaced_with(client, namespace, &resource))
+    } else {
+        Ok(kube::Api::default_namespaced_with(client, &resource))
+    }
 }
