@@ -4,6 +4,7 @@
 
 pub mod access_handlers;
 pub mod builder;
+pub mod clients;
 pub mod commands;
 pub mod configparser;
 
