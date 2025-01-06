@@ -22,11 +22,7 @@ pub async fn check(profile_name: &str) -> Result<()> {
     let profile = get_profile_config(profile_name)?;
     let registry_config = &get_config()?.registry;
 
-    let client = docker()
-        .await
-        // truncate error chain with new error (returned error is way too verbose)
-        .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;
-
+    let client = docker().await?;
     // build test image string
     // registry.example.com/somerepo/testimage:pleaseignore
     let test_image = format!("{}/credstestimage", registry_config.domain);
