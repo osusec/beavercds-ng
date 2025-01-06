@@ -1,6 +1,6 @@
 // Builders for the various client structs for Docker/Kube etc.
 
-use anyhow::Result;
+use anyhow::{anyhow, bail, Ok, Result};
 use bollard;
 use kube;
 use simplelog::*;
@@ -13,7 +13,11 @@ use crate::configparser::config;
 pub async fn docker() -> Result<bollard::Docker> {
     debug!("connecting to docker...");
     let client = bollard::Docker::connect_with_defaults()?;
-    client.ping().await?;
+    client
+        .ping()
+        .await
+        // truncate error chain with new error (returned error is way too verbose)
+        .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;
 
     Ok(client)
 }
