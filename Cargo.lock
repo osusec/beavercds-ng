@@ -289,6 +289,7 @@ dependencies = [
  "tempfile",
  "tera",
  "tokio",
+ "ureq",
  "void",
  "zip",
 ]
@@ -1189,7 +1190,7 @@ dependencies = [
  "hyper 1.5.0",
  "hyper-util",
  "log",
- "rustls 0.23.16",
+ "rustls 0.23.21",
  "rustls-native-certs 0.8.0",
  "rustls-pki-types",
  "tokio",
@@ -1570,7 +1571,7 @@ dependencies = [
  "k8s-openapi",
  "kube-core",
  "pem",
- "rustls 0.23.16",
+ "rustls 0.23.21",
  "rustls-pemfile 2.2.0",
  "secrecy",
  "serde",
@@ -2295,9 +2296,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.16"
+version = "0.23.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eee87ff5d9b36712a58574e12e9f0ea80f915a5b0ac518d322b24a465617925e"
+checksum = "8f287924602bf649d949c63dc8ac8b235fa5387d394020705b80c4eb597ce5b8"
 dependencies = [
  "log",
  "once_cell",
@@ -2941,7 +2942,7 @@ version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c7bc40d0e5a97695bb96e27995cd3a08538541b0a846f65bba7a359f36700d4"
 dependencies = [
- "rustls 0.23.16",
+ "rustls 0.23.21",
  "rustls-pki-types",
  "tokio",
 ]
@@ -3163,6 +3164,22 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
+name = "ureq"
+version = "2.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02d1a66277ed75f640d608235660df48c8e3c19f3b4edb6a263315626cc3c01d"
+dependencies = [
+ "base64 0.22.1",
+ "flate2",
+ "log",
+ "once_cell",
+ "rustls 0.23.21",
+ "rustls-pki-types",
+ "url",
+ "webpki-roots",
+]
 
 [[package]]
 name = "url"
