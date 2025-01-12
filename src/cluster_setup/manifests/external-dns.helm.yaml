@@ -1,0 +1,17 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: external-dns
+  namespace: kube-system
+spec:
+  repo: https://charts.jetstack.io
+  chart: cert-manager
+  version: v1.15.1
+
+  targetNamespace: ingress
+  createNamespace: true
+
+  valuesContent: |
+    crds:
+      enabled: true
+      keep: true

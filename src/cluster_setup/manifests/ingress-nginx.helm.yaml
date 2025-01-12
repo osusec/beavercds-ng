@@ -1,0 +1,15 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: ingress-nginx
+  namespace: kube-system
+spec:
+  repo: https://kubernetes.github.io/ingress-nginx
+  chart: ingress-nginx
+
+  targetNamespace: ingress
+  createNamespace: true
+
+  # nginx values for tcp ports will be set separately via HelmChartConfig CRD.
+  # this will make it easier for `deploy` to update those values without
+  # subsequent calls to `cluster-setup` overwriting changes.
