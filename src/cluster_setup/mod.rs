@@ -54,6 +54,8 @@ pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
     let client = kube_client(profile).await?;
 
     const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/ingress-nginx.helm.yaml");
+
+    // TODO: watch for helm chart manifest to apply correctly
     apply_manifest_yaml(client, CHART_YAML).await
 }
 
@@ -63,7 +65,11 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     let client = kube_client(profile).await?;
 
     const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/cert-manager.helm.yaml");
-    apply_manifest_yaml(client, CHART_YAML).await
+    apply_manifest_yaml(client.clone(), CHART_YAML).await?;
+
+    const ISSUERS_YAML: &str =
+        include_str!("../asset_files/setup_manifests/letsencrypt.issuers.yaml");
+    apply_manifest_yaml(client, ISSUERS_YAML).await
 }
 
 pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
