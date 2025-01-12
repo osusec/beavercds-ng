@@ -4,8 +4,7 @@ metadata:
   name: external-dns
   namespace: kube-system
 spec:
-  repo: oci://registry-1.docker.io/bitnamicharts/
-  chart: external-dns
+  chart: oci://registry-1.docker.io/bitnamicharts/external-dns
 
   targetNamespace: ingress
   createNamespace: true
