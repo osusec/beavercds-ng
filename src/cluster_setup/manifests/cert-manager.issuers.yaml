@@ -5,7 +5,8 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory"
-    email: ${var.certissuer_email}
+    # TODO: use user email?
+    email: beavercds-prod@example.com
     privateKeySecretRef:
       name: letsencrypt-secret
     solvers:
@@ -21,7 +22,8 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: ${var.certissuer_email}
+    # TODO: use user email?
+    email: beavercds-staging@example.com
     privateKeySecretRef:
       name: letsencrypt-staging-secret
     solvers:
