@@ -1,5 +1,7 @@
 // Builders for the various client structs for Docker/Kube etc.
 
+use std::error::Error;
+
 use anyhow::{anyhow, bail, Ok, Result};
 use bollard;
 use futures::TryFutureExt;
@@ -68,10 +70,10 @@ pub async fn kube_client(profile: &config::ProfileConfig) -> Result<kube::Client
     let client_config = match &profile.kubeconfig {
         Some(kc_path) => {
             let kc = kube::config::Kubeconfig::read_from(kc_path)?;
-            kube::Config::from_custom_kubeconfig(kc, &options).await?
+            kube::Config::from_custom_kubeconfig(kc, &options).await
         }
-        None => kube::Config::from_kubeconfig(&options).await?,
-    };
+        None => kube::Config::from_kubeconfig(&options).await,
+    }?;
 
     let client = kube::Client::try_from(client_config)?;
 

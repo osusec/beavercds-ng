@@ -29,6 +29,7 @@ use crate::configparser::{config, get_config, get_profile_config};
 // and parsing the output, and does not require Helm to be installed.
 pub async fn deploy_helm_controller(profile: &config::ProfileConfig) -> Result<()> {
     info!("deploying Helm controller...");
+
     let client = kube_client(profile).await?;
 
     // // download manifest from Github release artifacts
@@ -39,17 +40,44 @@ pub async fn deploy_helm_controller(profile: &config::ProfileConfig) -> Result<(
     //     .text()
     //     .await?;
 
-    // // the upstream manifest uses an unqualified image, so we need to add the registry to it
-    // let manifest = manifest.replace(
-    //     "image: rancher/helm-controller",
-    //     "image: docker.io/rancher/helm-controller",
-    // );
-
     // nevermind that, upstream manifest is missing RBAC
     // use vendored copy with changes
-    let manifest = include_str!("helm-controller-cluster-scoped.deployment.yaml");
+    const MANIFEST: &str = include_str!("manifests/helm-controller-cluster-scoped.deployment.yaml");
+    apply_manifest_yaml(client, MANIFEST).await
+}
 
-    let pp = PatchParams::apply("kubectl-light").force();
+pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
+    info!("deploying nginx-ingress chart...");
+
+    let client = kube_client(profile).await?;
+
+    const CHART_YAML: &str = include_str!("manifests/ingress-nginx.helm.yaml");
+    apply_manifest_yaml(client, CHART_YAML).await
+}
+
+pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> {
+    info!("deploying cert-manager chart...");
+
+    let client = kube_client(profile).await?;
+
+    const CHART_YAML: &str = include_str!("manifests/cert-manager.helm.yaml");
+    apply_manifest_yaml(client, CHART_YAML).await
+}
+
+pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
+    info!("deploying external-dns chart...");
+
+    let client = kube_client(profile).await?;
+
+    const CHART_YAML: &str = include_str!("manifests/external-dns.helm.yaml");
+    apply_manifest_yaml(client, CHART_YAML).await
+}
+
+/// Apply multi-document manifest file
+async fn apply_manifest_yaml(client: kube::Client, manifest: &str) -> Result<()> {
+    // set ourself as the owner for managed fields
+    // https://kubernetes.io/docs/reference/using-api/server-side-apply/#managers
+    let pp = PatchParams::apply("beavercds").force();
 
     // this manifest has multiple documents (crds, deployment)
     for yaml in multidoc_deserialize(&manifest)? {
@@ -80,27 +108,26 @@ pub async fn deploy_helm_controller(profile: &config::ProfileConfig) -> Result<(
     Ok(())
 }
 
-pub fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
-    Ok(())
-}
-
-pub fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> {
-    Ok(())
-}
-
-pub fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
-    Ok(())
-}
-
 /// Deserialize multi-document yaml string into a Vec of the documents
 fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yml::Value>> {
     use serde::Deserialize;
+
     let mut docs = vec![];
     for de in serde_yml::Deserializer::from_str(data) {
         match serde_yml::Value::deserialize(de)? {
+            // discard any empty documents (e.g. from trailing ---)
             serde_yml::Value::Null => (),
             not_null => docs.push(not_null),
         };
     }
     Ok(docs)
+
+    // // deserialize all chunks
+    // serde_yml::Deserializer::from_str(data)
+    //     .map(serde_yml::Value::deserialize)
+    //     // discard any empty documents (e.g. from trailing ---)
+    //     .filter_ok(|val| val != &serde_yml::Value::Null)
+    //     // coerce errors to Anyhow
+    //     .map(|r| r.map_err(|e| e.into()))
+    //     .collect()
 }

@@ -1,6 +1,5 @@
 # VENDORED FROM UPSTREAM WITH CHANGES:
 # - add needed RBAC bindings: https://github.com/k3s-io/helm-controller/issues/195
-# - use fully qualified (with registry) image name
 #
 # upstream ref: https://github.com/k3s-io/helm-controller/releases/download/v0.15.15/deploy-cluster-scoped.yaml
 
