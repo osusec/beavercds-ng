@@ -4,14 +4,43 @@ metadata:
   name: external-dns
   namespace: kube-system
 spec:
-  repo: https://charts.jetstack.io
-  chart: cert-manager
-  version: v1.15.1
+  repo: oci://registry-1.docker.io/bitnamicharts/
+  chart: external-dns
 
   targetNamespace: ingress
   createNamespace: true
 
   valuesContent: |
-    crds:
-      enabled: true
-      keep: true
+    rbac:
+      create: true
+
+    provider: aws
+
+    # Watch these resources for new DNS records
+    sources:
+      - service
+      - ingress
+
+    policy: upsert-only
+
+    domainFilters: []
+
+    # These help tell which records are owned by external-dns.
+    registry: "txt"
+    txtOwnerId: "k8s-external-dns"
+    txtPrefix: "k8s-owner."
+
+    # dont use any internal ips
+    extraArgs:
+      exclude-target-net: "10.0.0.0/8"
+      txt-wildcard-replacement: "star"
+
+    ## Limit external-dns resources
+    resources:
+      limits:
+        memory: 50Mi
+      requests:
+        memory: 50Mi
+        cpu: 10m
+
+    logLevel: debug
