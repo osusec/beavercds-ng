@@ -14,7 +14,7 @@ use simplelog::*;
 use crate::clients::{kube_api_for, kube_client};
 use crate::configparser::{config, get_config, get_profile_config};
 
-// Deploy cluster resources needed for challenges to work.
+// De../asset_files/setup_ploy cluster resources needed for challenges to work.
 //
 // Some components can or must be deployed and configured ahead of time, like
 // the ingress controller, cert-manager, external-dns, and helm controller.
@@ -32,7 +32,7 @@ pub async fn deploy_helm_controller(profile: &config::ProfileConfig) -> Result<(
 
     let client = kube_client(profile).await?;
 
-    // // download manifest from Github release artifacts
+    // // download manifest from Github re../asset_files/setup_lease artifacts
     // debug!("downloading manifest from github release");
     // const CONTROLLER_VERSION: &str = "v0.15.15"; // current latest release
     // let manifest = reqwest::get(format!("https://github.com/k3s-io/helm-controller/releases/download/{VER}/deploy-cluster-scoped.yaml", VER = CONTROLLER_VERSION))
@@ -42,7 +42,9 @@ pub async fn deploy_helm_controller(profile: &config::ProfileConfig) -> Result<(
 
     // nevermind that, upstream manifest is missing RBAC
     // use vendored copy with changes
-    const MANIFEST: &str = include_str!("manifests/helm-controller-cluster-scoped.deployment.yaml");
+    const MANIFEST: &str = include_str!(
+        "../asset_files/setup_manifests/helm-controller-cluster-scoped.deployment.yaml"
+    );
     apply_manifest_yaml(client, MANIFEST).await
 }
 
@@ -51,7 +53,7 @@ pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
 
     let client = kube_client(profile).await?;
 
-    const CHART_YAML: &str = include_str!("manifests/ingress-nginx.helm.yaml");
+    const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/ingress-nginx.helm.yaml");
     apply_manifest_yaml(client, CHART_YAML).await
 }
 
@@ -60,7 +62,7 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
 
     let client = kube_client(profile).await?;
 
-    const CHART_YAML: &str = include_str!("manifests/cert-manager.helm.yaml");
+    const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/cert-manager.helm.yaml");
     apply_manifest_yaml(client, CHART_YAML).await
 }
 
@@ -69,7 +71,7 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
 
     let client = kube_client(profile).await?;
 
-    const CHART_YAML: &str = include_str!("manifests/external-dns.helm.yaml");
+    const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/external-dns.helm.yaml");
     apply_manifest_yaml(client, CHART_YAML).await
 }
 
