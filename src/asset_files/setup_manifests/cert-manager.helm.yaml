@@ -6,7 +6,6 @@ metadata:
 spec:
   repo: https://charts.jetstack.io
   chart: cert-manager
-  version: v1.15.1
 
   targetNamespace: ingress
   createNamespace: true
@@ -14,4 +13,3 @@ spec:
   valuesContent: |
     crds:
       enabled: true
-      keep: true

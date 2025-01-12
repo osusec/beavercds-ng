@@ -34,6 +34,7 @@ rust-s3 = { version = "0.35.1", default-features = false, features = [
   "fail-on-err",
   "tokio-rustls-tls",
 ] }
+ureq = "2.12.1"
 
 
 [dev-dependencies]

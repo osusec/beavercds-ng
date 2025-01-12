@@ -1,8 +1,6 @@
 // Builders for the various client structs for Docker/Kube etc.
 
-use std::error::Error;
-
-use anyhow::{anyhow, bail, Ok, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use bollard;
 use futures::TryFutureExt;
 use kube::{
@@ -79,25 +77,25 @@ pub async fn kube_client(profile: &config::ProfileConfig) -> Result<kube::Client
 
     // check kube api readiness endpoint to make sure its reachable
     let ready_req = http::Request::get("/readyz").body(vec![]).unwrap();
-    if client.request_text(ready_req).await.map_err(|e| {
+    let ready_resp = client
+        .request_text(ready_req)
+        .await
         // change 'Connection refused' error into something more helpful
-        // anyhow!("could not connect to Kubernetes (is KUBECONFIG or KUBECONTEXT correct?)")
-        e
-    })? != "ok"
-    {
-        bail!("kubernetes is not ready")
+        .map_err(|e| {
+            anyhow!("could not connect to Kubernetes (is KUBECONFIG or KUBECONTEXT correct?)")
+        })?;
+
+    if ready_resp != "ok" {
+        bail!("Kubernetes is not ready")
     };
 
     Ok(client)
 }
 
-/// Create a Kube API client for the passed object's resource type
-pub async fn kube_api_for(
+pub async fn kube_resource_for(
     kube_object: &DynamicObject,
-    client: kube::Client,
-) -> Result<kube::Api<DynamicObject>> {
-    let ns = kube_object.metadata.namespace.as_deref();
-
+    client: &kube::Client,
+) -> Result<(ApiResource, ApiCapabilities)> {
     let gvk = if let Some(tm) = &kube_object.types {
         GroupVersionKind::try_from(tm)?
     } else {
@@ -108,15 +106,25 @@ pub async fn kube_api_for(
     };
 
     let name = kube_object.name_any();
-    let (resource, caps) = kube::discovery::pinned_kind(&client, &gvk)
+
+    kube::discovery::pinned_kind(&client, &gvk)
         .await
-        // .with_context(|| {
-        //     format!(
-        //         "could not find resource type {:?} on cluster",
-        //         kube_object.types.unwrap_or(TypeMeta::default())
-        //     )
-        // })
-        ?;
+        .with_context(|| {
+            format!(
+                "could not find resource type {:?} on cluster",
+                kube_object.types.clone().unwrap_or(TypeMeta::default())
+            )
+        })
+}
+
+/// Create a Kube API client for the passed object's resource type
+pub async fn kube_api_for(
+    kube_object: &DynamicObject,
+    client: kube::Client,
+) -> Result<kube::Api<DynamicObject>> {
+    let ns = kube_object.metadata.namespace.as_deref();
+
+    let (resource, caps) = kube_resource_for(&kube_object, &client).await?;
 
     if caps.scope == kube::discovery::Scope::Cluster {
         Ok(kube::Api::all_with(client, &resource))
