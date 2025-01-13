@@ -13,3 +13,7 @@ spec:
   # nginx values for tcp ports will be set separately via HelmChartConfig CRD.
   # this will make it easier for `deploy` to update those values without
   # subsequent calls to `cluster-setup` overwriting changes.
+
+  valuesContent: |-
+    controller:
+      ingressClass: "beavercds-ingress"
