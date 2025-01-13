@@ -13,7 +13,7 @@ spec:
     rbac:
       create: true
 
-    provider: aws
+    {{ provider_credentials | indent(4) }}
 
     # Watch these resources for new DNS records
     sources:
@@ -22,17 +22,19 @@ spec:
 
     policy: upsert-only
 
-    domainFilters: []
+    domainFilters:
+      - "{{ chal_domain }}"
 
     # These help tell which records are owned by external-dns.
     registry: "txt"
     txtOwnerId: "k8s-external-dns"
     txtPrefix: "k8s-owner."
 
-    # dont use any internal ips
     extraArgs:
+      # ignore any services with internal ips
       exclude-target-net: "10.0.0.0/8"
-      txt-wildcard-replacement: "star"
+      # special character replacement
+      txt-wildcard-replacement: star
 
     ## Limit external-dns resources
     resources:
