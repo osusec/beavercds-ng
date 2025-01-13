@@ -107,12 +107,12 @@ pub async fn kube_resource_for(
 
     let name = kube_object.name_any();
 
-    kube::discovery::pinned_kind(&client, &gvk)
+    kube::discovery::pinned_kind(client, &gvk)
         .await
         .with_context(|| {
             format!(
                 "could not find resource type {:?} on cluster",
-                kube_object.types.clone().unwrap_or(TypeMeta::default())
+                kube_object.types.clone().unwrap_or_default()
             )
         })
 }
@@ -124,7 +124,7 @@ pub async fn kube_api_for(
 ) -> Result<kube::Api<DynamicObject>> {
     let ns = kube_object.metadata.namespace.as_deref();
 
-    let (resource, caps) = kube_resource_for(&kube_object, &client).await?;
+    let (resource, caps) = kube_resource_for(kube_object, &client).await?;
 
     if caps.scope == kube::discovery::Scope::Cluster {
         Ok(kube::Api::all_with(client, &resource))

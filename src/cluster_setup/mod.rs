@@ -141,7 +141,7 @@ async fn apply_manifest_yaml(client: kube::Client, manifest: &str) -> Result<()>
     let pp = PatchParams::apply("beavercds").force();
 
     // this manifest has multiple documents (crds, deployment)
-    for yaml in multidoc_deserialize(&manifest)? {
+    for yaml in multidoc_deserialize(manifest)? {
         let obj: DynamicObject = serde_yml::from_value(yaml)?;
         debug!(
             "applying resource {} {}",
