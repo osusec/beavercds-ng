@@ -52,6 +52,9 @@ fn all_yaml() {
                             region: us-fake-1
                             access_key: accesskey
                             secret_key: secretkey
+                        dns:
+                            provider: somebody
+                            thing: whatever
             "#,
         )?;
 
@@ -91,8 +94,8 @@ fn all_yaml() {
                 "testing".to_string(),
                 ProfileDeploy {
                     challenges: HashMap::from([
-                        ("misc/foo".to_string(), true),
                         ("web/bar".to_string(), false),
+                        ("misc/foo".to_string(), true),
                     ]),
                 },
             )]),
@@ -111,6 +114,11 @@ fn all_yaml() {
                         access_key: "accesskey".to_string(),
                         secret_key: "secretkey".to_string(),
                     },
+                    dns: serde_yml::to_value(HashMap::from([
+                        ("provider", "somebody"),
+                        ("thing", "whatever"),
+                    ]))
+                    .unwrap(),
                 },
             )]),
         };
@@ -166,6 +174,9 @@ fn yaml_with_env_overrides() {
                             region: us-fake-1
                             access_key: accesskey
                             secret_key: secretkey
+                        dns:
+                            provider: somebody
+                            thing: whatever
             "#,
         )?;
 
@@ -236,6 +247,9 @@ fn partial_yaml_with_env() {
                             bucket_name: asset_testing
                             endpoint: s3.example
                             region: us-fake-1
+                        dns:
+                            provider: somebody
+                            thing: whatever
             "#,
         )?;
 
@@ -332,6 +346,9 @@ fn bad_yaml_missing_secrets() {
                             bucket_name: asset_testing
                             endpoint: s3.example
                             region: us-fake-1
+                        dns:
+                            provider: somebody
+                            thing: whatever
             "#,
         )?;
 

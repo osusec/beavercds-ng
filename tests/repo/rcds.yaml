@@ -39,3 +39,9 @@ profiles:
       region: x
       access_key: somekey
       secret_key: somesecret
+    dns:
+      provider: aws
+      aws:
+        credentials:
+          accessKey: asdfasdf
+          secretKey: asdfasdf

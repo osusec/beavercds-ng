@@ -103,6 +103,7 @@ struct ProfileConfig {
     kubeconfig: Option<String>,
     kubecontext: String,
     s3: S3Config,
+    dns: serde_yml::Value,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
