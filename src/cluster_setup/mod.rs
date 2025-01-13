@@ -8,6 +8,7 @@ use k8s_openapi::{
 use kube::api::{DynamicObject, Patch, PatchParams};
 use kube::runtime::WatchStreamExt;
 use kube::{Api, ResourceExt};
+use minijinja::render;
 use serde;
 use serde_yml;
 use simplelog::*;
@@ -95,8 +96,18 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
 
     let client = kube_client(profile).await?;
 
-    const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/external-dns.helm.yaml");
-    apply_helm_crd(client, CHART_YAML).await
+    const CHART_RAW_YAML: &str =
+        include_str!("../asset_files/setup_manifests/external-dns.helm.yaml.j2");
+
+    // add profile dns: field directly to chart values
+    let chart_yaml = render!(
+        CHART_RAW_YAML,
+        provider_credentials => serde_yml::to_string(&profile.dns)?,
+        chal_domain => profile.challenges_domain
+    );
+    trace!("applying templated external-dns manifest:\n{}", chart_yaml);
+
+    apply_helm_crd(client, &chart_yaml).await
 }
 
 //
