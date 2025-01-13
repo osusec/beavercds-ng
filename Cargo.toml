@@ -12,7 +12,6 @@ glob = "0.3.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_yml = "0.0.12"
 serde_nested_with = "0.2.5"
-tera = "1.19.1"
 simplelog = { version = "0.12.2", features = ["paris"] }
 fully_pub = "0.1.4"
 void = "1"
@@ -35,6 +34,7 @@ rust-s3 = { version = "0.35.1", default-features = false, features = [
   "tokio-rustls-tls",
 ] }
 ureq = "2.12.1"
+minijinja = "2.6.0"
 
 
 [dev-dependencies]
