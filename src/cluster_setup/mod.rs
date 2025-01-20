@@ -154,7 +154,7 @@ fn install_helm_chart(
     let reader = helm_cmd.reader()?;
     let mut lines = BufReader::new(reader).lines();
 
-    while let Some(item) = lines.next() {
+    for item in lines {
         match item {
             Ok(line) => debug!("helm: <bright-black>{line}</>"),
             Err(e) => return Err(e.into()),
