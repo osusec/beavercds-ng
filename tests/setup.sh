@@ -26,7 +26,9 @@ start_stuff (){
     ROOTLESS_ARG=''
   fi
 
+  # create cluster and expose ingress ports
   k3d cluster create "$MINIKUBE_PROFILE" \
+    -p "8000:80@loadbalancer" -p "8443:443@loadbalancer" \
     --k3s-arg "--disable=traefik@server:*" \
     "$ROOTLESS_ARG"
 
