@@ -1,6 +1,7 @@
 ---
 controller:
-  ingressClass: "beavercds-ingress"
+  ingressClassResource:
+    name: beavercds
 
 # nginx values for tcp ports will be set separately in other values file
 # this will make it easier for `deploy` to update those values without
