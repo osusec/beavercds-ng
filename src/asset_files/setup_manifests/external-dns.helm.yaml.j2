@@ -1,47 +1,36 @@
-apiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
-  name: external-dns
-  namespace: kube-system
-spec:
-  chart: oci://registry-1.docker.io/bitnamicharts/external-dns
+---
+rbac:
+  create: true
 
-  targetNamespace: ingress
-  createNamespace: true
+{{ provider_credentials | indent(4) }}
 
-  valuesContent: |
-    rbac:
-      create: true
+# Watch these resources for new DNS records
+sources:
+  - service
+  - ingress
 
-    {{ provider_credentials | indent(4) }}
+policy: upsert-only
 
-    # Watch these resources for new DNS records
-    sources:
-      - service
-      - ingress
+domainFilters:
+  - "{{ chal_domain }}"
 
-    policy: upsert-only
+# These help tell which records are owned by external-dns.
+registry: "txt"
+txtOwnerId: "k8s-external-dns"
+txtPrefix: "k8s-owner."
 
-    domainFilters:
-      - "{{ chal_domain }}"
+extraArgs:
+  # ignore any services with internal ips
+  exclude-target-net: "10.0.0.0/8"
+  # special character replacement
+  txt-wildcard-replacement: star
 
-    # These help tell which records are owned by external-dns.
-    registry: "txt"
-    txtOwnerId: "k8s-external-dns"
-    txtPrefix: "k8s-owner."
+## Limit external-dns resources
+resources:
+  limits:
+    memory: 50Mi
+  requests:
+    memory: 50Mi
+    cpu: 10m
 
-    extraArgs:
-      # ignore any services with internal ips
-      exclude-target-net: "10.0.0.0/8"
-      # special character replacement
-      txt-wildcard-replacement: star
-
-    ## Limit external-dns resources
-    resources:
-      limits:
-        memory: 50Mi
-      requests:
-        memory: 50Mi
-        cpu: 10m
-
-    logLevel: debug
+logLevel: debug

@@ -1,15 +1,7 @@
-apiVersion: helm.cattle.io/v1
-kind: HelmChart
-metadata:
-  name: cert-manager
-  namespace: kube-system
-spec:
-  repo: https://charts.jetstack.io
-  chart: cert-manager
-
-  targetNamespace: ingress
-  createNamespace: true
-
-  valuesContent: |
-    crds:
-      enabled: true
+---
+crds:
+  # install the cert-manager CRDs as part of the chart
+  enabled: true
+  # also delete them when the chart is deleted
+  # (the chart errors when installing if its CRDs are still around)
+  keep: false
