@@ -48,5 +48,5 @@ pub async fn check(profile_name: &str) -> Result<()> {
 
     // todo:? check what permissions we have and error if we are missing any
 
-    return Ok(());
+    Ok(())
 }

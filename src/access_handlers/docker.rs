@@ -38,7 +38,6 @@ pub async fn check(profile_name: &str) -> Result<()> {
         .await
         .with_context(|| "Could not pull images from registry (bad cluster credentials?)")?;
 
-    info!("  registry ok!");
     Ok(())
 }
 

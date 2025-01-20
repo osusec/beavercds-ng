@@ -1,6 +1,11 @@
 use std::fmt::Debug;
+use std::io::prelude::*;
+use std::io::BufReader;
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
+use duct;
+use http::header::VARY;
+use itertools::Itertools;
 use k8s_openapi::{
     api::apps::v1::Deployment,
     apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition,
@@ -8,82 +13,54 @@ use k8s_openapi::{
 use kube::api::{DynamicObject, Patch, PatchParams};
 use kube::runtime::WatchStreamExt;
 use kube::{Api, ResourceExt};
-use minijinja::render;
+use minijinja;
 use serde;
 use serde_yml;
 use simplelog::*;
-use ureq;
+use tempfile;
 
 use crate::clients::{kube_api_for, kube_client, kube_resource_for};
 use crate::configparser::{config, get_config, get_profile_config};
 
-// De../asset_files/setup_ploy cluster resources needed for challenges to work.
+// Deploy cluster resources needed for challenges to work.
 //
 // Some components can or must be deployed and configured ahead of time, like
-// the ingress controller, cert-manager, external-dns, and helm controller.
-
-/// Install k3s-io/helm-controller to manage Helm charts as custom resources.
-// The native Helm SDK/API is only available for Golang, and there are no
-// native wrappers around it. That leaves us with two options:
-//   - shell out to the Helm CLI
-//   - use an in-cluster operator/controller to manage Helm deployments as CRDs
-//
-// This uses the latter option, as it should be more reliable than shelling out
-// and parsing the output, and does not require Helm to be installed.
-pub async fn deploy_helm_controller(profile: &config::ProfileConfig) -> Result<()> {
-    info!("deploying Helm controller...");
-
-    let client = kube_client(profile).await?;
-
-    // // download manifest from Github re../asset_files/setup_lease artifacts
-    // debug!("downloading manifest from github release");
-    // const CONTROLLER_VERSION: &str = "v0.15.15"; // current latest release
-    // let manifest = reqwest::get(format!("https://github.com/k3s-io/helm-controller/releases/download/{VER}/deploy-cluster-scoped.yaml", VER = CONTROLLER_VERSION))
-    //     .await?
-    //     .text()
-    //     .await?;
-
-    // nevermind that, upstream manifest is missing RBAC
-    // use vendored copy with changes
-    const MANIFEST: &str = include_str!(
-        "../asset_files/setup_manifests/helm-controller-cluster-scoped.deployment.yaml"
-    );
-    apply_manifest_yaml(client, MANIFEST).await
-}
+// the ingress controller, cert-manager, and external-dns
 
 pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
-    info!("deploying nginx-ingress chart...");
+    info!("deploying ingress-nginx chart...");
 
-    let client = kube_client(profile).await?;
+    const VALUES: &str = include_str!("../asset_files/setup_manifests/ingress-nginx.helm.yaml");
+    trace!("values:\n{}", VALUES);
 
-    const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/ingress-nginx.helm.yaml");
-
-    // TODO: watch for helm chart manifest to apply correctly
-    apply_helm_crd(client, CHART_YAML).await
+    install_helm_chart(
+        profile,
+        "ingress-nginx",
+        Some("https://kubernetes.github.io/ingress-nginx"),
+        "ingress-nginx",
+        "ingress",
+        VALUES,
+    )
+    .context("failed to install ingress-nginx helm chart")
 }
 
 pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> {
     info!("deploying cert-manager chart...");
 
+    const VALUES: &str = include_str!("../asset_files/setup_manifests/cert-manager.helm.yaml");
+    trace!("values:\n{}", VALUES);
+
+    install_helm_chart(
+        profile,
+        "cert-manager",
+        Some("https://charts.jetstack.io"),
+        "cert-manager",
+        "ingress",
+        VALUES,
+    )?;
+
+    info!("deploying cert-manager issuers...");
     let client = kube_client(profile).await?;
-
-    const CHART_YAML: &str = include_str!("../asset_files/setup_manifests/cert-manager.helm.yaml");
-    apply_helm_crd(client.clone(), CHART_YAML).await?;
-
-    // install cert-manager from upstream static manifest instead of helm chart.
-    // the helm install gets confused when its CRDs already exist, so this is
-    // more reliable against running cluster-setup multiple times.
-    // EDIT: this is not the case when `crds.keep=false` so :shrug:
-
-    // let certmanager_manifest = ureq::get(
-    //     "https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml",
-    // )
-    //   .call()
-    //   .context("could not download cert-manager manifest from Github release")?
-    //   .into_string()?
-    //   // deploy this into ingress namespace with other resources
-    //   .replace("namespace: cert-manager", "namespace: ingress");
-    // apply_manifest_yaml(client.clone(), &certmanager_manifest);
 
     // letsencrypt and letsencrypt-staging
     const ISSUERS_YAML: &str =
@@ -94,53 +71,95 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
 pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
     info!("deploying external-dns chart...");
 
-    let client = kube_client(profile).await?;
-
-    const CHART_RAW_YAML: &str =
+    const VALUES_TEMPLATE: &str =
         include_str!("../asset_files/setup_manifests/external-dns.helm.yaml.j2");
 
     // add profile dns: field directly to chart values
-    let chart_yaml = render!(
-        CHART_RAW_YAML,
+    let values = minijinja::render!(
+        VALUES_TEMPLATE,
         provider_credentials => serde_yml::to_string(&profile.dns)?,
         chal_domain => profile.challenges_domain
     );
-    trace!("applying templated external-dns manifest:\n{}", chart_yaml);
+    trace!("deploying templated external-dns values:\n{}", values);
 
-    apply_helm_crd(client, &chart_yaml).await
+    install_helm_chart(
+        profile,
+        "oci://registry-1.docker.io/bitnamicharts/external-dns",
+        None,
+        "external-dns",
+        "ingress",
+        &values,
+    )
 }
 
 //
 // install helpers
 //
 
-// Apply helm chart manifest and wait for deployment status
-async fn apply_helm_crd(client: kube::Client, manifest: &str) -> Result<()> {
-    apply_manifest_yaml(client.clone(), manifest).await?;
+/// Install the chart via shelling out to Helm cli
+fn install_helm_chart(
+    profile: &config::ProfileConfig,
+    chart: &str,
+    repo: Option<&str>,
+    release_name: &str,
+    namespace: &str,
+    values: &str,
+) -> Result<()> {
+    // write values to tempfile
+    let mut temp_values = tempfile::Builder::new()
+        .prefix(release_name)
+        .suffix(".values.yaml")
+        .tempfile()?;
+    temp_values.write_all(values.as_bytes())?;
 
-    // now wait for the deploy job to run and update status
+    let repo_arg = match repo {
+        Some(r) => format!("--repo {r}"),
+        None => "".to_string(),
+    };
 
-    // pull out name and namespace from yaml string
-    // this will only get a single manifest from the install_* functions,
-    // so this unwrapping is safe:tm:
-    let chart_crd: DynamicObject = serde_yml::from_str(manifest)?;
-    debug!(
-        "waiting for chart deployment {} {}",
-        chart_crd
-            .namespace()
-            .unwrap_or("[default namespace]".to_string()),
-        chart_crd.name_any()
+    // build args as string/split instead of direct vec to make interpolating
+    // conditional repo_arg easier. there is not weird whitespace etc. that
+    // would mess up interpolation; all of the values here are constants
+    // elsewhere, no user input.
+
+    // use `upgrade --install` instead of `install` so subsequent runs dont
+    // error when the release already exists
+    let args = format!(
+        r#"
+        upgrade --install
+            {release_name}
+            {chart} {repo_arg}
+            --namespace {namespace} --create-namespace
+            --values {}
+            --wait --timeout 1m
+            --debug
+            --kube-context {}
+        "#,
+        temp_values.path().to_string_lossy(),
+        profile.kubecontext
     );
 
-    let (chart_resource, caps) = kube_resource_for(&chart_crd, &client).await?;
-    let chart_api = kube_api_for(&chart_crd, client).await?;
+    let mut helm_cmd = duct::cmd("helm", args.split_whitespace())
+        // capture stdout and stderr for our logging
+        .stderr_to_stdout()
+        .stdout_capture();
 
-    let watch_conf = kube::runtime::watcher::Config::default();
-    let watcher = kube::runtime::metadata_watcher(chart_api, watch_conf);
+    // set kubeconfig if there is one in the profile
+    if let Some(kc) = profile.kubeconfig.as_ref() {
+        // TODO: normalize ~/ in path
+        helm_cmd = helm_cmd.env("KUBECONFIG", kc)
+    }
 
-    // TODO: actually wait for chart status to change...
-    // need to get job name from chart resource `.status.jobName`, and look at
-    // status of job. helm-controller does not update status of chart CRD :/
+    // stream output to stdout
+    let reader = helm_cmd.reader()?;
+    let mut lines = BufReader::new(reader).lines();
+
+    while let Some(item) = lines.next() {
+        match item {
+            Ok(line) => debug!("helm: <bright-black>{line}</>"),
+            Err(e) => return Err(e.into()),
+        }
+    }
 
     Ok(())
 }
