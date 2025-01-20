@@ -11,12 +11,6 @@ pub async fn run(profile_name: &str) {
     info!("setting up cluster...");
     let config = get_profile_config(profile_name).unwrap();
 
-    if let Err(e) = setup::deploy_helm_controller(config).await {
-        error!("{e:?}");
-        exit(1);
-    }
-
-    // once helm types are installed, install the other charts
     if let Err(e) = setup::install_ingress(config).await {
         error!("{e:?}");
         exit(1);
@@ -29,4 +23,6 @@ pub async fn run(profile_name: &str) {
         error!("{e:?}");
         exit(1);
     }
+
+    info!("charts deployed!")
 }

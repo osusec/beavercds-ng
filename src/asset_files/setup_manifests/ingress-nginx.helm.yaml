@@ -1,7 +1,7 @@
 ---
+controller:
+  ingressClass: "beavercds-ingress"
+
 # nginx values for tcp ports will be set separately in other values file
 # this will make it easier for `deploy` to update those values without
 # subsequent calls to `cluster-setup` overwriting changes.
-#
-controller:
-  ingressClass: "beavercds-ingress"
