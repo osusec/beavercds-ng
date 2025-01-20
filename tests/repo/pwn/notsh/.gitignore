@@ -1,1 +1,5 @@
 *.o
+
+libc.so.6
+notsh
+notsh.zip
