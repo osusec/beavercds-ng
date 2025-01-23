@@ -27,6 +27,9 @@ use crate::configparser::{config, get_config, get_profile_config};
 // Some components can or must be deployed and configured ahead of time, like
 // the ingress controller, cert-manager, and external-dns
 
+// install these charts into this namespace
+pub const INGRESS_NAMESPACE: &str = "ingress";
+
 pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
     info!("deploying ingress-nginx chart...");
 
@@ -38,7 +41,7 @@ pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
         "ingress-nginx",
         Some("https://kubernetes.github.io/ingress-nginx"),
         "ingress-nginx",
-        "ingress",
+        INGRESS_NAMESPACE,
         VALUES,
     )
     .context("failed to install ingress-nginx helm chart")
@@ -55,7 +58,7 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
         "cert-manager",
         Some("https://charts.jetstack.io"),
         "cert-manager",
-        "ingress",
+        INGRESS_NAMESPACE,
         VALUES,
     )?;
 
@@ -87,7 +90,7 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
         "oci://registry-1.docker.io/bitnamicharts/external-dns",
         None,
         "external-dns",
-        "ingress",
+        INGRESS_NAMESPACE,
         &values,
     )
 }
