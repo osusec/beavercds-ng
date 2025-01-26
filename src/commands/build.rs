@@ -8,8 +8,8 @@ use crate::configparser::{get_config, get_profile_config};
 pub fn run(profile_name: &str, push: &bool, extract: &bool) {
     info!("building images...");
 
-    let tags = match build_challenges(profile_name, *push, *extract) {
-        Ok(tags) => tags,
+    let results = match build_challenges(profile_name, *push, *extract) {
+        Ok(results) => results,
         Err(e) => {
             error!("{e:?}");
             exit(1)

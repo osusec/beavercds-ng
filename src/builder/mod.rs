@@ -9,7 +9,7 @@ use simplelog::*;
 use std::default;
 use std::fmt::Pointer;
 use std::iter::zip;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::configparser::challenge::{
     BuildObject, ChallengeConfig, ImageSource::*, Pod, ProvideConfig,
@@ -28,16 +28,26 @@ macro_rules! image_tag_str {
     };
 }
 
+/// Information about all of a challenge's build artifacts.
+#[derive(Debug)]
+pub struct BuildResult {
+    /// Container image tags of all containers in the challenge, if the challenge has container images.
+    /// Will be empty if challenge has no images built from source.
+    tags: Vec<String>,
+    /// Path on disk to local assets (both built and static).
+    /// Will be empty if challenge has no file assets
+    assets: Vec<PathBuf>,
+}
+
 /// Build all enabled challenges for the given profile. Returns tags built
 pub fn build_challenges(
     profile_name: &str,
     push: bool,
     extract_artifacts: bool,
-) -> Result<Vec<String>> {
+) -> Result<Vec<BuildResult>> {
     enabled_challenges(profile_name)?
         .iter()
         .map(|chal| build_challenge(profile_name, chal, push, extract_artifacts))
-        .flatten_ok()
         .collect::<Result<_>>()
 }
 
@@ -47,15 +57,22 @@ fn build_challenge(
     chal: &ChallengeConfig,
     push: bool,
     extract_artifacts: bool,
-) -> Result<Vec<String>> {
+) -> Result<BuildResult> {
     debug!("building images for chal {:?}", chal.directory);
     let config = get_config()?;
 
-    let built_tags: Vec<_> = chal
+    let mut built = BuildResult {
+        tags: vec![],
+        assets: vec![],
+    };
+
+    built.tags = chal
         .pods
         .iter()
         .filter_map(|p| match &p.image_source {
+            // ignore any pods that use existing images
             Image(_) => None,
+            // build any pods that need building
             Build(b) => {
                 let tag = format!(
                     image_tag_str!(),
@@ -80,11 +97,12 @@ fn build_challenge(
     if push {
         debug!(
             "pushing {} tags for chal {:?}",
-            built_tags.len(),
+            built.tags.len(),
             chal.directory
         );
 
-        built_tags
+        built
+            .tags
             .iter()
             .map(|tag| {
                 docker::push_image(tag, &config.registry.build)
@@ -116,7 +134,7 @@ fn build_challenge(
             })
             .collect_vec();
 
-        let assets = image_assoc
+        built.assets = image_assoc
             .into_iter()
             .map(|(p, tag)| {
                 let name = format!(
@@ -142,7 +160,8 @@ fn build_challenge(
             .flatten_ok()
             .collect::<Result<Vec<_>>>()?;
 
-        info!("extracted artifacts: {:?}", assets);
+        info!("extracted artifacts: {:?}", built.assets);
     }
-    Ok(built_tags)
+
+    Ok(built)
 }
