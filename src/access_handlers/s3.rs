@@ -3,6 +3,7 @@ use s3;
 use simplelog::*;
 use tokio;
 
+use crate::clients::{bucket_client, bucket_client_anonymous};
 use crate::configparser::{
     config::{ProfileConfig, S3Config},
     get_config, get_profile_config,
@@ -59,38 +60,4 @@ pub async fn check(profile_name: &str) -> Result<()> {
     bucket.delete_object(test_file.0).await?;
 
     Ok(())
-}
-
-/// create bucket client for passed profile config
-pub fn bucket_client(config: &S3Config) -> Result<Box<s3::Bucket>> {
-    trace!("creating bucket client");
-    // TODO: once_cell this so it reuses the same bucket?
-    let region = s3::Region::Custom {
-        region: config.region.clone(),
-        endpoint: config.endpoint.clone(),
-    };
-    let creds = s3::creds::Credentials::new(
-        Some(&config.access_key),
-        Some(&config.secret_key),
-        None,
-        None,
-        None,
-    )?;
-    let bucket = s3::Bucket::new(&config.bucket_name, region, creds)?.with_path_style();
-
-    Ok(bucket)
-}
-
-/// create public/anonymous bucket client for passed profile config
-pub fn bucket_client_anonymous(config: &S3Config) -> Result<Box<s3::Bucket>> {
-    trace!("creating anon bucket client");
-    // TODO: once_cell this so it reuses the same bucket?
-    let region = s3::Region::Custom {
-        region: config.region.clone(),
-        endpoint: config.endpoint.clone(),
-    };
-    let creds = s3::creds::Credentials::anonymous()?;
-    let bucket = s3::Bucket::new(&config.bucket_name, region, creds)?.with_path_style();
-
-    Ok(bucket)
 }
