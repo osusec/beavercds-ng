@@ -7,7 +7,7 @@ use std::env::current_exe;
 use std::process::exit;
 
 use crate::clients::kube_client;
-use crate::cluster_setup::{self as setup, INGRESS_NAMESPACE};
+use crate::cluster_setup as setup;
 use crate::configparser::config::ProfileConfig;
 use crate::configparser::{get_config, get_profile_config};
 
@@ -24,7 +24,7 @@ pub async fn run(profile_name: &str, _no_build: &bool, _dry_run: &bool) {
     }
 }
 
-/// check to make sure that the
+/// check to make sure that the needed ingress charts are deployed and running
 async fn check_setup(profile: &ProfileConfig) -> Result<()> {
     let kube = kube_client(profile).await?;
     let secrets: kube::Api<Secret> = kube::Api::namespaced(kube, setup::INGRESS_NAMESPACE);
@@ -84,14 +84,18 @@ async fn check_setup(profile: &ProfileConfig) -> Result<()> {
         // anyhow context() calls. TODO: should this be in run() to present
         // errors there instead of chaining and returning one combined Error
         // here?
+        #[allow(clippy::manual_try_fold)] // need to build the Result ourselves
         missing
             .iter()
             .fold(Err(anyhow!("")), |e, reason| match reason {
-                ChartFailure::Missing(c) => {
-                    e.with_context(|| format!("chart {}/{c} is not deployed", INGRESS_NAMESPACE))
-                }
+                ChartFailure::Missing(c) => e.with_context(|| {
+                    format!("chart {}/{c} is not deployed", setup::INGRESS_NAMESPACE)
+                }),
                 ChartFailure::DeploymentFailed(c) => e.with_context(|| {
-                    format!("chart {}/{c} is in a failed state", INGRESS_NAMESPACE)
+                    format!(
+                        "chart {}/{c} is in a failed state",
+                        setup::INGRESS_NAMESPACE
+                    )
                 }),
             })
             .with_context(|| {
