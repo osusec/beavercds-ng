@@ -12,8 +12,10 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use void::Void;
 
+use crate::builder::image_tag_str;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
+use crate::configparser::get_config;
 
 pub fn parse_all() -> Result<Vec<ChallengeConfig>, Vec<Error>> {
     // find all challenge.yaml files
@@ -137,6 +139,27 @@ pub struct ChallengeConfig {
 
     #[serde(default)]
     pods: Vec<Pod>, // optional if no containers used
+}
+impl ChallengeConfig {
+    pub fn container_tag_for_pod(&self, profile_name: &str, pod_name: &str) -> Result<String> {
+        let config = get_config()?;
+        let pod = self
+            .pods
+            .iter()
+            .find(|p| p.name == pod_name)
+            .ok_or(anyhow!("pod {} not found in challenge", pod_name))?;
+
+        match &pod.image_source {
+            ImageSource::Image(t) => Ok(t.to_string()),
+            ImageSource::Build(b) => Ok(format!(
+                image_tag_str!(),
+                registry = config.registry.domain,
+                challenge = self.name,
+                container = pod.name,
+                profile = profile_name
+            )),
+        }
+    }
 }
 
 fn default_difficulty() -> i64 {
