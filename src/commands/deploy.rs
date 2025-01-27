@@ -22,6 +22,8 @@ pub async fn run(profile_name: &str, _no_build: &bool, _dry_run: &bool) {
         error!("{e:?}");
         exit(1);
     }
+
+    // let build_result =
 }
 
 /// check to make sure that the needed ingress charts are deployed and running
@@ -81,9 +83,11 @@ async fn check_setup(profile: &ProfileConfig) -> Result<()> {
 
     if !missing.is_empty() {
         // if any errors are present, collect/reduce them all into one error via
-        // anyhow context() calls. TODO: should this be in run() to present
-        // errors there instead of chaining and returning one combined Error
-        // here?
+        // anyhow context() calls.
+        //
+        // TODO: this should probably be returning Vec<Error> instead of a
+        // single Error chain. should this be in run() to present errors there
+        // instead of chaining and returning one combined Error here?
         #[allow(clippy::manual_try_fold)] // need to build the Result ourselves
         missing
             .iter()
