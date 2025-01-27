@@ -105,21 +105,31 @@ async fn extract_archive(
     }))
     .await?;
 
-    // write them all to new zip
-    let zipfile = File::create(chal.directory.join(archive_name))?;
+    zip_files(&chal.directory.join(archive_name), copied_files)?;
+
+    Ok(vec![chal.directory.join(archive_name)])
+}
+
+/// Add multiple local `files` to a zipfile at `zip_name`
+fn zip_files(archive_name: &Path, files: Vec<PathBuf>) -> Result<PathBuf> {
+    debug!("creating zip at {:?}", archive_name);
+    let zipfile = File::create(archive_name)?;
     let mut z = zip::ZipWriter::new(zipfile);
     let opts = zip::write::SimpleFileOptions::default();
 
     let mut buf = vec![];
-    for path in copied_files.into_iter() {
+    for path in files.iter() {
         trace!("adding {:?} to zip", &path);
-        File::open(&path)?.read_to_end(&mut buf)?;
-        z.start_file(path.to_string_lossy(), opts)?;
+        // TODO: dont read entire file into memory
+        File::open(path)?.read_to_end(&mut buf)?;
+        // TODO: should this always do basename? some chals might need specific
+        // file structure but including dirs should work fine
+        z.start_file(path.file_name().unwrap().to_string_lossy(), opts)?;
         z.write_all(&buf)?;
         buf.clear();
     }
 
     z.finish();
 
-    Ok(vec![chal.directory.join(archive_name)])
+    Ok(archive_name.to_path_buf())
 }
