@@ -141,6 +141,8 @@ pub struct ChallengeConfig {
     pods: Vec<Pod>, // optional if no containers used
 }
 impl ChallengeConfig {
+    /// Return the container image tag for the pod; either the upstream image or
+    /// the tag to be built if the image is to be built from source.
     pub fn container_tag_for_pod(&self, profile_name: &str, pod_name: &str) -> Result<String> {
         let config = get_config()?;
         let pod = self
@@ -180,7 +182,7 @@ enum FlagType {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
 struct FilePath {
-    file: String,
+    file: PathBuf,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -215,11 +217,11 @@ struct ProvideConfig {
     /// they are zipped into an archive with this filename. If this is omitted,
     /// each file(s) are listed individually with no renaming.
     #[serde(default, rename = "as")]
-    as_file: Option<String>,
+    as_file: Option<PathBuf>,
 
     /// List of files to read from the repo or container. If reading from the
     /// repo source files, only relative paths are supported.
-    include: Vec<String>,
+    include: Vec<PathBuf>,
 }
 impl FromStr for ProvideConfig {
     type Err = Void;
@@ -227,7 +229,7 @@ impl FromStr for ProvideConfig {
         Ok(ProvideConfig {
             from: None,
             as_file: None,
-            include: vec![s.to_string()],
+            include: vec![PathBuf::from(s)],
         })
     }
 }

@@ -241,27 +241,27 @@ fn challenge_provide() {
                 ProvideConfig {
                     from: None,
                     as_file: None,
-                    include: vec!["foo.txt".to_string()]
+                    include: vec!["foo.txt".into()]
                 },
                 ProvideConfig {
                     from: None,
                     as_file: None,
-                    include: vec!["bar.txt".to_string(), "baz.txt".to_string()]
+                    include: vec!["bar.txt".into(), "baz.txt".into()]
                 },
                 ProvideConfig {
                     from: None,
-                    as_file: Some("stuff.zip".to_string()),
-                    include: vec!["ducks".to_string(), "beavers".to_string()]
+                    as_file: Some("stuff.zip".into()),
+                    include: vec!["ducks".into(), "beavers".into()]
                 },
                 ProvideConfig {
-                    from: Some("container".to_string()),
+                    from: Some("container".into()),
                     as_file: None,
-                    include: vec!["/foo/bar".to_string()]
+                    include: vec!["/foo/bar".into()]
                 },
                 ProvideConfig {
                     from: Some("container".to_string()),
-                    as_file: Some("shells.zip".to_string()),
-                    include: vec!["/usr/bin/bash".to_string(), "/usr/bin/zsh".to_string()]
+                    as_file: Some("shells.zip".into()),
+                    include: vec!["/usr/bin/bash".into(), "/usr/bin/zsh".into()]
                 }
             ],
         );
