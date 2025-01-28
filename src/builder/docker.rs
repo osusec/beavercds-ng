@@ -157,7 +157,7 @@ pub async fn remove_container(container: ContainerInfo) -> Result<()> {
     Ok(())
 }
 
-pub async fn copy_file(container: &ContainerInfo, from: PathBuf, to: PathBuf) -> Result<PathBuf> {
+pub async fn copy_file(container: &ContainerInfo, from: &Path, to: &Path) -> Result<PathBuf> {
     trace!("copying {}:{from:?} to {to:?}", container.name);
 
     let client = docker().await?;
@@ -197,7 +197,7 @@ pub async fn copy_file(container: &ContainerInfo, from: PathBuf, to: PathBuf) ->
     if let Some(mut entry_r) = tar.entries()?.next() {
         let mut entry = entry_r?;
         trace!("got entry: {:?}", entry.path());
-        let mut target = File::create(&to)?;
+        let mut target = File::create(to)?;
         io::copy(&mut entry, &mut target)?;
     } else {
         bail!(

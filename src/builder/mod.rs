@@ -16,10 +16,8 @@ use crate::configparser::challenge::{
 };
 use crate::configparser::{enabled_challenges, get_config};
 
-pub mod docker;
-
 pub mod artifacts;
-use artifacts::extract_asset;
+pub mod docker;
 
 // define tag format as reusable macro
 macro_rules! image_tag_str {
@@ -125,19 +123,19 @@ fn build_challenge(
     if extract_artifacts {
         info!("extracting build artifacts for chal {:?}", chal.directory);
 
-        // associate file `Provide` entries that have a `from:` source with their corresponding container image
-        let image_assoc = chal
-            .provide
-            .iter()
-            .filter_map(|p| {
-                p.from
-                    .as_ref()
-                    .map(|f| (p, chal.container_tag_for_pod(profile_name, f)))
-            })
-            .collect_vec();
+        let (provide_container, provide_static): (Vec<_>, Vec<_>) =
+            chal.provide.iter().partition(|p| p.from.is_some());
 
-        built.assets = image_assoc
-            .into_iter()
+        let extracted_files = provide_container
+            .iter()
+            // associate container `Provide` entries with their corresponding container image
+            .map(|provide| {
+                (
+                    provide,
+                    chal.container_tag_for_pod(profile_name, provide.from.as_ref().unwrap()),
+                )
+            })
+            // extract each container provide entry
             .map(|(p, tag)| {
                 let tag = tag?;
 
@@ -148,13 +146,14 @@ fn build_challenge(
                 );
                 let container = docker::create_container(&tag, &name)?;
 
-                let asset_result = extract_asset(chal, p, &container).with_context(|| {
-                    format!(
-                        "failed to extract build artifacts for chal {:?} container {:?}",
-                        chal.directory,
-                        p.from.clone().unwrap()
-                    )
-                });
+                let asset_result =
+                    artifacts::extract_asset(chal, p, &container).with_context(|| {
+                        format!(
+                            "failed to extract build artifacts for chal {:?} container {:?}",
+                            chal.directory,
+                            p.from.clone().unwrap()
+                        )
+                    });
 
                 // clean up container even if it failed
                 docker::remove_container(container)?;
@@ -163,6 +162,16 @@ fn build_challenge(
             })
             .flatten_ok()
             .collect::<Result<Vec<_>>>()?;
+
+        // handle potentially zipping up local files as well
+        let local_files = provide_static.iter().map(|provide| {
+            match provide.as_file.as_ref() {
+                // no archiving needed, pass files as-is
+                None => Ok(provide.include.clone()),
+                // need to archive multiple files into zip
+                Some(as_) => artifacts::zip_files(as_, provide.include.as_ref()).map(|z| vec![z]),
+            }
+        });
 
         info!("extracted artifacts: {:?}", built.assets);
     }
