@@ -88,9 +88,9 @@ fn challenge_two_levels() {
                 category: "foo".to_string(),
                 directory: PathBuf::from("foo/test"),
 
-                flag: FlagType::Text(FileText {
+                flag: FlagType::Text {
                     text: "test{it-works}".to_string()
-                }),
+                },
 
                 provide: vec![],
                 pods: vec![],
@@ -212,9 +212,13 @@ fn challenge_provide() {
 
             provide:
                 - foo.txt
+
                 - include:
                     - bar.txt
                     - baz.txt
+
+                - as: oranges
+                  include: apples
 
                 - as: stuff.zip
                   include:
@@ -224,6 +228,11 @@ fn challenge_provide() {
                 - from: container
                   include:
                     - /foo/bar
+
+                - from: container
+                  as: pears
+                  include:
+                    - /usr/lib/peaches
 
                 - from: container
                   as: shells.zip
@@ -238,30 +247,33 @@ fn challenge_provide() {
         assert_eq!(
             chals[0].provide,
             vec![
-                ProvideConfig {
-                    from: None,
-                    as_file: None,
-                    include: vec!["foo.txt".into()]
+                ProvideConfig::FromRepo {
+                    files: vec!["foo.txt".into()]
                 },
-                ProvideConfig {
-                    from: None,
-                    as_file: None,
-                    include: vec!["bar.txt".into(), "baz.txt".into()]
+                ProvideConfig::FromRepo {
+                    files: vec!["bar.txt".into(), "baz.txt".into()]
                 },
-                ProvideConfig {
-                    from: None,
-                    as_file: Some("stuff.zip".into()),
-                    include: vec!["ducks".into(), "beavers".into()]
+                ProvideConfig::FromRepoRename {
+                    from: "apples".into(),
+                    to: "oranges".into()
                 },
-                ProvideConfig {
-                    from: Some("container".into()),
-                    as_file: None,
-                    include: vec!["/foo/bar".into()]
+                ProvideConfig::FromRepoArchive {
+                    files: vec!["ducks".into(), "beavers".into()],
+                    archive_name: "stuff.zip".into()
                 },
-                ProvideConfig {
-                    from: Some("container".to_string()),
-                    as_file: Some("shells.zip".into()),
-                    include: vec!["/usr/bin/bash".into(), "/usr/bin/zsh".into()]
+                ProvideConfig::FromContainer {
+                    container: "container".to_string(),
+                    files: vec!["/foo/bar".into()]
+                },
+                ProvideConfig::FromContainerRename {
+                    container: "container".to_string(),
+                    from: "/usr/lib/peaches".into(),
+                    to: "pears".into(),
+                },
+                ProvideConfig::FromContainerArchive {
+                    container: "container".to_string(),
+                    files: vec!["/usr/bin/bash".into(), "/usr/bin/zsh".into()],
+                    archive_name: "shells.zip".into(),
                 }
             ],
         );

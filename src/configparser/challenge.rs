@@ -173,63 +173,75 @@ fn default_difficulty() -> i64 {
 #[fully_pub]
 enum FlagType {
     RawString(String),
-    File(FilePath),
-    Text(FileText),
-    Regex(FileRegex),
-    Verifier(FileVerifier),
+    File { file: PathBuf },
+    Text { text: String },
+    Regex { regex: String },
+    Verifier { verifier: String },
 }
 
+// Parse each distinct kind of Provide action as a separate enum variant
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(untagged, deny_unknown_fields)]
 #[fully_pub]
-struct FilePath {
-    file: PathBuf,
-}
+enum ProvideConfig {
+    /// Upload file(s) as-is.
+    /// Single or multiple files with no as: or from:
+    /// Default if only a string is given.
+    FromRepo {
+        #[serde(rename = "include")]
+        files: Vec<PathBuf>,
+    },
+    /// Rename single file before uploading.
+    /// Single file with as: field without from:
+    FromRepoRename {
+        #[serde(rename = "include")]
+        from: PathBuf,
+        #[serde(rename = "as")]
+        to: PathBuf,
+    },
+    /// Upload multiple files in zip archive
+    /// Multiple files with as: field without from:
+    FromRepoArchive {
+        #[serde(rename = "include")]
+        files: Vec<PathBuf>,
+        #[serde(rename = "as")]
+        archive_name: PathBuf,
+    },
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct FileText {
-    text: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct FileRegex {
-    regex: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct FileVerifier {
-    verifier: String,
-}
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-#[fully_pub]
-struct ProvideConfig {
-    /// The challenge container image where the file should be fetched from,
-    /// based on the names in `pods`. If omitted, the default value is the repo
-    /// challenge directory.
-    #[serde(default)]
-    from: Option<String>,
-
-    /// Rename or create zip file from included files. If only one file is
-    /// included, it is renamed to this value. If multiple files are included,
-    /// they are zipped into an archive with this filename. If this is omitted,
-    /// each file(s) are listed individually with no renaming.
-    #[serde(default, rename = "as")]
-    as_file: Option<PathBuf>,
-
-    /// List of files to read from the repo or container. If reading from the
-    /// repo source files, only relative paths are supported.
-    include: Vec<PathBuf>,
+    /// Upload file(s) from container as-is.
+    /// Single or multiple files with no as:
+    FromContainer {
+        #[serde(rename = "from")]
+        container: String,
+        #[serde(rename = "include")]
+        files: Vec<PathBuf>,
+    },
+    /// Rename single file from container before uploading.
+    /// Single file with as: field
+    FromContainerRename {
+        #[serde(rename = "from")]
+        container: String,
+        #[serde(rename = "include")]
+        from: PathBuf,
+        #[serde(rename = "as")]
+        to: PathBuf,
+    },
+    /// Upload multiple files from container in zip archive
+    /// Multiple files with as: field
+    FromContainerArchive {
+        #[serde(rename = "from")]
+        container: String,
+        #[serde(rename = "include")]
+        files: Vec<PathBuf>,
+        #[serde(rename = "as")]
+        archive_name: PathBuf,
+    },
 }
 impl FromStr for ProvideConfig {
     type Err = Void;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(ProvideConfig {
-            from: None,
-            as_file: None,
-            include: vec![PathBuf::from(s)],
+        Ok(ProvideConfig::FromRepo {
+            files: vec![PathBuf::from(s)],
         })
     }
 }
