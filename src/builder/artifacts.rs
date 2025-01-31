@@ -10,37 +10,57 @@ use tempfile::tempdir_in;
 use zip;
 
 use crate::builder::docker;
+use crate::clients::docker;
 use crate::configparser::challenge::{ChallengeConfig, ProvideConfig};
 
-/// extract assets from given container name and provide config to challenge directory, return file path(s) extracted
+/// extract assets from provide config and possible container to challenge directory, return file path(s) extracted
 #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn extract_asset(
     chal: &ChallengeConfig,
     provide: &ProvideConfig,
-    container: &docker::ContainerInfo,
+    // pod_containers:
 ) -> Result<Vec<PathBuf>> {
-    debug!("extracting assets from container {}", &container.name);
-    // This needs to handle three cases:
-    // - single or multiple files without renaming (no as: field)
-    // - single file with rename (one item with as:)
-    // - multiple files as archive (multiple items with as:)
+    // This needs to handle three cases * 2 sources:
+    //   - single or multiple files without renaming (no as: field)
+    //   - single file with rename (one item with as:)
+    //   - multiple files as archive (multiple items with as:)
+    // and whether the file is coming from
+    //   - the repo
+    //   - or a container
 
     // TODO: since this puts artifacts in the repo source folder, this should
     // try to not overwrite any existing files.
 
-    match &provide.as_file {
-        // no renaming, copy out all as-is
-        None => extract_files(chal, container, &provide.include).await,
-        // (as is keyword, so add underscore)
-        Some(as_) => {
-            if provide.include.len() == 1 {
-                // single file, rename
-                extract_rename(chal, container, &provide.include[0], as_).await
-            } else {
-                // multiple files, zip as archive
-                extract_archive(chal, container, &provide.include, as_).await
-            }
+    // debug!("extracting assets from container {}", &container.name);
+
+    let docker = docker().await?;
+
+    match provide {
+        // No action necessary, return path as-is
+        ProvideConfig::FromRepo { files } => Ok(files.clone()),
+        ProvideConfig::FromRepoRename { from, to } => {
+            std::fs::rename(from, to)?;
+            Ok(vec![to.clone()])
         }
+        ProvideConfig::FromRepoArchive {
+            files,
+            archive_name,
+        } => {
+            zip_files(archive_name, files)?;
+            Ok(vec![archive_name.clone()])
+        }
+
+        ProvideConfig::FromContainer { container, files } => extract_files(chal, container, files),
+        ProvideConfig::FromContainerRename {
+            container,
+            from,
+            to,
+        } => extract_rename(chal, container, from, to),
+        ProvideConfig::FromContainerArchive {
+            container,
+            files,
+            archive_name,
+        } => extract_archive(chal, container, files, archive_name),
     }
 }
 
