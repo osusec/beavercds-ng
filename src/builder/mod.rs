@@ -51,10 +51,10 @@ pub fn build_challenges(
     profile_name: &str,
     push: bool,
     extract_artifacts: bool,
-) -> Result<Vec<BuildResult>> {
+) -> Result<Vec<(&ChallengeConfig, BuildResult)>> {
     enabled_challenges(profile_name)?
-        .iter()
-        .map(|chal| build_challenge(profile_name, chal, push, extract_artifacts))
+        .into_iter()
+        .map(|chal| build_challenge(profile_name, chal, push, extract_artifacts).map(|r| (chal, r)))
         .collect::<Result<_>>()
 }
 
