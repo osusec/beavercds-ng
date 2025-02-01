@@ -33,10 +33,10 @@ pub(super) use image_tag_str;
 pub struct BuildResult {
     /// Container image tags of all containers in the challenge, if the challenge has container images.
     /// Will be empty if challenge has no images built from source.
-    tags: Vec<TagWithSource>,
+    pub tags: Vec<TagWithSource>,
     /// Path on disk to local assets (both built and static).
     /// Will be empty if challenge has no file assets
-    assets: Vec<PathBuf>,
+    pub assets: Vec<PathBuf>,
 }
 
 /// Tag string with added context of where it came from (built locally or an upstream image)
