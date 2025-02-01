@@ -122,7 +122,6 @@ pub async fn push_image(image_tag: &str, creds: &UserPass) -> Result<String> {
     Ok(tag.to_string())
 }
 
-#[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn create_container(image_tag: &str, name: &str) -> Result<ContainerInfo> {
     debug!("creating container {name:?} from image {image_tag:?}");
     let client = docker().await?;
@@ -143,7 +142,6 @@ pub async fn create_container(image_tag: &str, name: &str) -> Result<ContainerIn
     })
 }
 
-#[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn remove_container(container: ContainerInfo) -> Result<()> {
     debug!("removing container {}", &container.name);
     let client = docker().await?;
@@ -182,7 +180,10 @@ pub async fn copy_file(container: &ContainerInfo, from: &Path, to: &Path) -> Res
         });
 
     // collect byte stream chunks into full file
-    let mut temptar = Builder::new().suffix(".tar").tempfile_in(".")?;
+    let mut temptar = Builder::new()
+        .prefix(".beavercds-")
+        .suffix(".tar")
+        .tempfile_in(".")?;
     while let Some(chunk) = dl_stream.next().await {
         temptar.as_file_mut().write_all(&chunk?)?;
     }

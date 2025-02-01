@@ -23,6 +23,7 @@ pub async fn check(profile_name: &str) -> Result<()> {
     let registry_config = &get_config()?.registry;
 
     let client = docker().await?;
+
     // build test image string
     // registry.example.com/somerepo/testimage:pleaseignore
     let test_image = format!("{}/credstestimage", registry_config.domain);

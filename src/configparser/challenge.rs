@@ -180,6 +180,7 @@ enum FlagType {
 }
 
 // Parse each distinct kind of Provide action as a separate enum variant
+// TODO: enforce relative/absolute paths for repo/container Provide's (`validator` crate?)
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(untagged, deny_unknown_fields)]
 #[fully_pub]
