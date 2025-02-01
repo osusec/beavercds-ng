@@ -231,8 +231,7 @@ fn challenge_provide() {
 
                 - from: container
                   as: pears
-                  include:
-                    - /usr/lib/peaches
+                  include: /usr/lib/peaches
 
                 - from: container
                   as: shells.zip

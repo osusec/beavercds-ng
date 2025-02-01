@@ -3,7 +3,8 @@
 
 use anyhow::{anyhow, Context, Error, Result};
 use bollard::image::BuildImageOptions;
-use futures::stream::Iter;
+use futures::future::try_join_all;
+use futures::stream::{FuturesOrdered, Iter};
 use itertools::Itertools;
 use simplelog::*;
 use std::default;
@@ -123,55 +124,21 @@ fn build_challenge(
     if extract_artifacts {
         info!("extracting build artifacts for chal {:?}", chal.directory);
 
-        // let (provide_container, provide_static): (Vec<_>, Vec<_>) =
-        //     chal.provide.iter().partition(|p| p.from.is_some());
-
-        // let extracted_files = provide_container
-        //     .iter()
-        //     // associate container `Provide` entries with their corresponding container image
-        //     .map(|provide| {
-        //         (
-        //             provide,
-        //             chal.container_tag_for_pod(profile_name, provide.from.as_ref().unwrap()),
-        //         )
-        //     })
-        //     // extract each container provide entry
-        //     .map(|(p, tag)| {
-        //         let tag = tag?;
-
-        //         let name = format!(
-        //             "asset-container-{}-{}",
-        //             chal.directory.to_string_lossy().replace("/", "-"),
-        //             p.from.clone().unwrap()
-        //         );
-        //         let container = docker::create_container(&tag, &name)?;
-
-        //         let asset_result =
-        //             artifacts::extract_asset(chal, p, &container).with_context(|| {
-        //                 format!(
-        //                     "failed to extract build artifacts for chal {:?} container {:?}",
-        //                     chal.directory,
-        //                     p.from.clone().unwrap()
-        //                 )
-        //             });
-
-        //         // clean up container even if it failed
-        //         docker::remove_container(container)?;
-
-        //         asset_result
-        //     })
-        //     .flatten_ok()
-        //     .collect::<Result<Vec<_>>>()?;
-
-        // // handle potentially zipping up local files as well
-        // let local_files = provide_static.iter().map(|provide| {
-        //     match provide.as_file.as_ref() {
-        //         // no archiving needed, pass files as-is
-        //         None => Ok(provide.include.clone()),
-        //         // need to archive multiple files into zip
-        //         Some(as_) => artifacts::zip_files(as_, provide.include.as_ref()).map(|z| vec![z]),
-        //     }
-        // });
+        // extract each challenge provide entry
+        // this handles both local files and from build containers
+        let extracted_files = chal
+            .provide
+            .iter()
+            .map(|p| {
+                artifacts::extract_asset(chal, p, profile_name).with_context(|| {
+                    format!(
+                        "failed to extract build artifacts for chal {:?}",
+                        chal.directory,
+                    )
+                })
+            })
+            .flatten_ok()
+            .collect::<Result<Vec<_>>>()?;
 
         info!("extracted artifacts: {:?}", built.assets);
     }

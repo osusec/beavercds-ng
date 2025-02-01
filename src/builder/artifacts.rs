@@ -18,7 +18,7 @@ use crate::configparser::challenge::{ChallengeConfig, ProvideConfig};
 pub async fn extract_asset(
     chal: &ChallengeConfig,
     provide: &ProvideConfig,
-    // pod_containers:
+    profile_name: &str,
 ) -> Result<Vec<PathBuf>> {
     // This needs to handle three cases * 2 sources:
     //   - single or multiple files without renaming (no as: field)
@@ -31,36 +31,104 @@ pub async fn extract_asset(
     // TODO: since this puts artifacts in the repo source folder, this should
     // try to not overwrite any existing files.
 
-    // debug!("extracting assets from container {}", &container.name);
+    debug!(
+        "extracting assets for challenge {:?} provide {:?}",
+        chal.directory, &provide
+    );
 
     let docker = docker().await?;
 
     match provide {
+        // Repo file paths are relative to the challenge directory, so prepend chal dir
+
         // No action necessary, return path as-is
-        ProvideConfig::FromRepo { files } => Ok(files.clone()),
+        ProvideConfig::FromRepo { files } => {
+            Ok(files.iter().map(|f| chal.directory.join(f)).collect_vec())
+        }
         ProvideConfig::FromRepoRename { from, to } => {
-            std::fs::rename(from, to)?;
+            std::fs::copy(chal.directory.join(from), chal.directory.join(to))
+                .with_context(|| format!("could not copy repo file {from:?} to {to:?}"))?;
             Ok(vec![to.clone()])
         }
         ProvideConfig::FromRepoArchive {
             files,
             archive_name,
         } => {
-            zip_files(archive_name, files)?;
+            zip_files(
+                &chal.directory.join(archive_name),
+                &files.iter().map(|f| chal.directory.join(f)).collect_vec(),
+            )
+            .with_context(|| format!("could not create archive {archive_name:?}"))?;
             Ok(vec![archive_name.clone()])
         }
 
-        ProvideConfig::FromContainer { container, files } => extract_files(chal, container, files),
+        ProvideConfig::FromContainer {
+            container: container_name,
+            files,
+        } => {
+            let tag = chal.container_tag_for_pod(profile_name, container_name)?;
+
+            let name = format!(
+                "asset-container-{}-{}",
+                chal.directory.to_string_lossy().replace("/", "-"),
+                container_name
+            );
+            let container = docker::create_container(&tag, &name).await?;
+
+            let files = extract_files(chal, &container, files).await;
+
+            docker::remove_container(container).await?;
+
+            files
+        }
+        .with_context(|| format!("could not copy files {files:?} from container {container_name}")),
+
         ProvideConfig::FromContainerRename {
-            container,
+            container: container_name,
             from,
             to,
-        } => extract_rename(chal, container, from, to),
+        } => {
+            let tag = chal.container_tag_for_pod(profile_name, container_name)?;
+
+            let name = format!(
+                "asset-container-{}-{}",
+                chal.directory.to_string_lossy().replace("/", "-"),
+                container_name
+            );
+            let container = docker::create_container(&tag, &name).await?;
+
+            let files = extract_rename(chal, &container, from, &chal.directory.join(to)).await;
+
+            docker::remove_container(container).await?;
+
+            files
+        }
+        .with_context(|| format!("could not copy file {from:?} from container {container_name}")),
+
         ProvideConfig::FromContainerArchive {
-            container,
+            container: container_name,
             files,
             archive_name,
-        } => extract_archive(chal, container, files, archive_name),
+        } => {
+            let tag = chal.container_tag_for_pod(profile_name, container_name)?;
+
+            let name = format!(
+                "asset-container-{}-{}",
+                chal.directory.to_string_lossy().replace("/", "-"),
+                container_name
+            );
+            let container = docker::create_container(&tag, &name).await?;
+
+            let files =
+                extract_archive(chal, &container, files, &chal.directory.join(archive_name)).await;
+
+            docker::remove_container(container).await?;
+
+            files
+        }
+        .with_context(|| {
+            format!("could not create archive {archive_name:?} from container {container_name}")
+        }),
     }
 }
 
@@ -114,14 +182,17 @@ async fn extract_archive(
     );
 
     // copy all listed files to tempdir
-    let tempdir = tempdir_in(".")?;
+    let tempdir = tempfile::Builder::new()
+        .prefix(".beavercds-archive-")
+        .tempdir_in(".")?;
     let copied_files = try_join_all(files.iter().map(|from| async {
         let to = tempdir.path().join(from.file_name().unwrap());
         docker::copy_file(container, from, &to).await
     }))
     .await?;
 
-    zip_files(&chal.directory.join(archive_name), &copied_files)?;
+    // archive_name already has the chal dir prepended
+    zip_files(archive_name, &copied_files)?;
 
     Ok(vec![chal.directory.join(archive_name)])
 }
