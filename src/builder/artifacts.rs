@@ -119,7 +119,7 @@ async fn extract_archive(
         buf.clear();
     }
 
-    z.finish();
+    z.finish()?;
 
     Ok(vec![chal.directory.join(archive_name)])
 }
