@@ -216,7 +216,7 @@ pub fn zip_files(archive_name: &Path, files: &[PathBuf]) -> Result<PathBuf> {
         buf.clear();
     }
 
-    z.finish();
+    z.finish()?;
 
     Ok(archive_name.to_path_buf())
 }

@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(unused_variables, unused_imports)]
 // todo!: remove ^ later
 // we dont need unused variables etc warnings while we're working on it
 

@@ -155,7 +155,7 @@ fn install_helm_chart(
 
     // stream output to stdout
     let reader = helm_cmd.reader()?;
-    let mut lines = BufReader::new(reader).lines();
+    let lines = BufReader::new(reader).lines();
 
     for item in lines {
         match item {

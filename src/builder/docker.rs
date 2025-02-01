@@ -194,7 +194,7 @@ pub async fn copy_file(container: &ContainerInfo, from: &Path, to: &Path) -> Res
 
     // extract single file from archive to disk
     // we only copied out one file, so this tar should only have one file
-    if let Some(mut entry_r) = tar.entries()?.next() {
+    if let Some(entry_r) = tar.entries()?.next() {
         let mut entry = entry_r?;
         trace!("got entry: {:?}", entry.path());
         let mut target = File::create(to)?;
