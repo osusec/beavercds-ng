@@ -47,19 +47,25 @@ pub enum TagWithSource {
 }
 
 /// Build all enabled challenges for the given profile. Returns tags built
-pub fn build_challenges(
+pub async fn build_challenges(
     profile_name: &str,
     push: bool,
     extract_artifacts: bool,
 ) -> Result<Vec<(&ChallengeConfig, BuildResult)>> {
-    enabled_challenges(profile_name)?
-        .into_iter()
-        .map(|chal| build_challenge(profile_name, chal, push, extract_artifacts).map(|r| (chal, r)))
-        .collect::<Result<_>>()
+    try_join_all(
+        enabled_challenges(profile_name)?
+            .into_iter()
+            .map(|chal| async move {
+                build_challenge(profile_name, chal, push, extract_artifacts)
+                    .await
+                    .map(|r| (chal, r))
+            }),
+    )
+    .await
 }
 
 /// Build all images from given challenge, optionally pushing image or extracting artifacts
-fn build_challenge(
+async fn build_challenge(
     profile_name: &str,
     chal: &ChallengeConfig,
     push: bool,
@@ -73,27 +79,28 @@ fn build_challenge(
         assets: vec![],
     };
 
-    built.tags = chal
-        .pods
-        .iter()
-        .map(|p| match &p.image_source {
+    built.tags = try_join_all(chal.pods.iter().map(|p| async {
+        match &p.image_source {
             Image(tag) => Ok(TagWithSource::Upstream(tag.to_string())),
             // build any pods that need building
             Build(build) => {
                 let tag = chal.container_tag_for_pod(profile_name, &p.name)?;
 
-                let res = docker::build_image(&chal.directory, build, &tag).with_context(|| {
-                    format!(
-                        "error building image {} for chal {}",
-                        p.name,
-                        chal.directory.to_string_lossy()
-                    )
-                });
+                let res = docker::build_image(&chal.directory, build, &tag)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "error building image {} for chal {}",
+                            p.name,
+                            chal.directory.to_string_lossy()
+                        )
+                    });
                 // map result tag string into enum
                 res.map(TagWithSource::Built)
             }
-        })
-        .collect::<Result<_>>()?;
+        }
+    }))
+    .await?;
 
     if push {
         // only need to push tags we actually built
@@ -112,13 +119,12 @@ fn build_challenge(
             chal.directory
         );
 
-        tags_to_push
-            .iter()
-            .map(|tag| {
-                docker::push_image(tag, &config.registry.build)
-                    .with_context(|| format!("error pushing image {tag}"))
-            })
-            .collect::<Result<Vec<_>>>()?;
+        try_join_all(tags_to_push.iter().map(|tag| async move {
+            docker::push_image(tag, &config.registry.build)
+                .await
+                .with_context(|| format!("error pushing image {tag}"))
+        }))
+        .await?;
     }
 
     if extract_artifacts {
