@@ -23,7 +23,7 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
     }
 
     info!("building challenges...");
-    let build_results = match build_challenges(profile_name, true, true) {
+    let build_results = match build_challenges(profile_name, true, true).await {
         Ok(result) => result,
         Err(e) => {
             error!("{e:?}");
