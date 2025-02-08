@@ -48,14 +48,14 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
     }
 
     // B)
-    info!("deploying challenges...");
+    info!("uploading assets...");
     if let Err(e) = deploy::s3::upload_assets(profile_name, &build_results).await {
         error!("{e:?}");
         exit(1);
     }
 
     // A)
-    info!("deploying challenges...");
+    info!("updating frontend...");
     if let Err(e) = deploy::frontend::update_frontend(profile_name, &build_results).await {
         error!("{e:?}");
         exit(1);
