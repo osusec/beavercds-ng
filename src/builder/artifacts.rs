@@ -14,7 +14,6 @@ use crate::clients::docker;
 use crate::configparser::challenge::{ChallengeConfig, ProvideConfig};
 
 /// extract assets from provide config and possible container to challenge directory, return file path(s) extracted
-#[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn extract_asset(
     chal: &ChallengeConfig,
     provide: &ProvideConfig,

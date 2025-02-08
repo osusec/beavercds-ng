@@ -40,7 +40,7 @@ pub struct BuildResult {
 }
 
 /// Tag string with added context of where it came from (built locally or an upstream image)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TagWithSource {
     Upstream(String),
     Built(String),
@@ -132,19 +132,17 @@ async fn build_challenge(
 
         // extract each challenge provide entry
         // this handles both local files and from build containers
-        let extracted_files = chal
-            .provide
-            .iter()
-            .map(|p| {
-                artifacts::extract_asset(chal, p, profile_name).with_context(|| {
+        let extracted_files = try_join_all(chal.provide.iter().map(|p| async {
+            artifacts::extract_asset(chal, p, profile_name)
+                .await
+                .with_context(|| {
                     format!(
                         "failed to extract build artifacts for chal {:?}",
                         chal.directory,
                     )
                 })
-            })
-            .flatten_ok()
-            .collect::<Result<Vec<_>>>()?;
+        }))
+        .await?;
 
         info!("extracted artifacts: {:?}", built.assets);
     }
