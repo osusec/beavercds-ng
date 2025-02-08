@@ -30,12 +30,12 @@ pub async fn check(profile_name: &str) -> Result<()> {
     debug!("will push test image to {}", test_image);
 
     // push alpine image with build credentials
-    check_build_credentials(&client, &test_image)
+    check_build_credentials(client, &test_image)
         .await
         .with_context(|| "Could not push images to registry (bad build credentials?)")?;
 
     // try pulling that image with cluster credentials
-    check_cluster_credentials(&client, &test_image)
+    check_cluster_credentials(client, &test_image)
         .await
         .with_context(|| "Could not pull images from registry (bad cluster credentials?)")?;
 
