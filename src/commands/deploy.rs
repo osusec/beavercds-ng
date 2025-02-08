@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use simplelog::*;
 use std::process::exit;
 
@@ -31,6 +32,11 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
         }
     };
 
+    trace!(
+        "got built results: {:#?}",
+        build_results.iter().map(|b| &b.1).collect_vec()
+    );
+
     // deploy needs to:
     // A) render kubernetes manifests
     //    - namespace, deployment, service, ingress
@@ -41,21 +47,18 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
     // C) update frontend with new state of challenges
 
     // A)
-    info!("deploying challenges...");
     if let Err(e) = deploy::kubernetes::deploy_challenges(profile_name, &build_results).await {
         error!("{e:?}");
         exit(1);
     }
 
     // B)
-    info!("uploading assets...");
     if let Err(e) = deploy::s3::upload_assets(profile_name, &build_results).await {
         error!("{e:?}");
         exit(1);
     }
 
-    // A)
-    info!("updating frontend...");
+    // C)
     if let Err(e) = deploy::frontend::update_frontend(profile_name, &build_results).await {
         error!("{e:?}");
         exit(1);

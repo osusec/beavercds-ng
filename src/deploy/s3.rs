@@ -33,7 +33,7 @@ pub async fn upload_assets(
         .map(|(chal, result)| async move {
             // upload all files for a specific challenge
 
-            debug!("uploading assets for chal {:?}", chal.directory);
+            info!("  for chal {:?}...", chal.directory);
 
             let uploaded = result
                 .assets
