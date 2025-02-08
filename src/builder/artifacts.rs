@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Context, Error, Result};
-use futures::future::try_join_all;
 use futures::FutureExt;
 use itertools::Itertools;
 use simplelog::{debug, trace};
@@ -12,6 +11,7 @@ use zip;
 use crate::builder::docker;
 use crate::clients::docker;
 use crate::configparser::challenge::{ChallengeConfig, ProvideConfig};
+use crate::utils::TryJoinAll;
 
 /// extract assets from provide config and possible container to challenge directory, return file path(s) extracted
 pub async fn extract_asset(
@@ -143,12 +143,15 @@ async fn extract_files(
         files
     );
 
-    try_join_all(files.iter().map(|from| async {
-        // use basename of source file as target name
-        let to = chal.directory.join(from.file_name().unwrap());
-        docker::copy_file(container, from, &to).await
-    }))
-    .await
+    files
+        .iter()
+        .map(|from| async {
+            // use basename of source file as target name
+            let to = chal.directory.join(from.file_name().unwrap());
+            docker::copy_file(container, from, &to).await
+        })
+        .try_join_all()
+        .await
 }
 
 /// Extract one file from container and rename
@@ -184,11 +187,14 @@ async fn extract_archive(
     let tempdir = tempfile::Builder::new()
         .prefix(".beavercds-archive-")
         .tempdir_in(".")?;
-    let copied_files = try_join_all(files.iter().map(|from| async {
-        let to = tempdir.path().join(from.file_name().unwrap());
-        docker::copy_file(container, from, &to).await
-    }))
-    .await?;
+    let copied_files = files
+        .iter()
+        .map(|from| async {
+            let to = tempdir.path().join(from.file_name().unwrap());
+            docker::copy_file(container, from, &to).await
+        })
+        .try_join_all()
+        .await?;
 
     // archive_name already has the chal dir prepended
     zip_files(archive_name, &copied_files)?;
