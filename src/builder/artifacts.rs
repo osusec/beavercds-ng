@@ -176,7 +176,6 @@ async fn extract_rename(
 async fn extract_archive(
     chal: &ChallengeConfig,
     container: &docker::ContainerInfo,
-    // files: &Vec<PathBuf>,
     files: &[PathBuf],
     archive_name: &Path,
 ) -> Result<Vec<PathBuf>> {
@@ -203,7 +202,7 @@ async fn extract_archive(
     // archive_name already has the chal dir prepended
     zip_files(archive_name, &copied_files)?;
 
-    Ok(vec![chal.directory.join(archive_name)])
+    Ok(vec![archive_name.to_path_buf()])
 }
 
 /// Add multiple local `files` to a zipfile at `zip_name`

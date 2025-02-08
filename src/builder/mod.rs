@@ -138,7 +138,7 @@ async fn build_challenge(
 
         // extract each challenge provide entry
         // this handles both local files and from build containers
-        let extracted_files = chal
+        built.assets = chal
             .provide
             .iter()
             .map(|p| async {
@@ -152,7 +152,11 @@ async fn build_challenge(
                     })
             })
             .try_join_all()
-            .await?;
+            .await?
+            // flatten to single vec of all paths
+            .into_iter()
+            .flatten()
+            .collect_vec();
 
         info!("extracted artifacts: {:?}", built.assets);
     }
