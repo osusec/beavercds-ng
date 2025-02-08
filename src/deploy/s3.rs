@@ -1,9 +1,10 @@
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context, Error, Ok, Result};
 use futures::future::try_join_all;
 use itertools::Itertools;
+use s3::Bucket;
 use simplelog::*;
 use tokio;
 
@@ -37,20 +38,10 @@ pub async fn upload_assets(
             let uploaded = result
                 .assets
                 .iter()
-                .map(|asset| async move {
-                    let path_in_bucket = format!(
-                        "assets/{chal_slug}/{file}",
-                        chal_slug = chal.directory.to_string_lossy(),
-                        file = asset.file_name().unwrap().to_string_lossy()
-                    );
-
-                    trace!("uploading {:?} to bucket path {:?}", asset, &path_in_bucket);
-
-                    // TODO: move to async/streaming to better handle large files and report progress
-                    let mut asset_file = tokio::fs::File::open(asset).await?;
-                    bucket.put_object_stream_blocking(&mut asset_file, &path_in_bucket)?;
-
-                    Ok(path_in_bucket.into())
+                .map(|asset_file| async move {
+                    upload_single_file(bucket, chal, asset_file)
+                        .await
+                        .with_context(|| format!("failed to upload file {asset_file:?}"))
                 })
                 .try_join_all()
                 .await
@@ -66,4 +57,28 @@ pub async fn upload_assets(
         })
         .try_join_all()
         .await
+}
+
+async fn upload_single_file(
+    bucket: &Bucket,
+    chal: &ChallengeConfig,
+    file: &Path,
+) -> Result<PathBuf> {
+    // e.g. s3.example.domain/assets/misc/foo/stuff.zip
+    let path_in_bucket = format!(
+        "assets/{chal_slug}/{file}",
+        chal_slug = chal.directory.to_string_lossy(),
+        file = file.file_name().unwrap().to_string_lossy()
+    );
+
+    trace!("uploading {:?} to bucket path {:?}", file, &path_in_bucket);
+
+    // TODO: move to async/streaming to better handle large files and report progress
+    let mut asset_file = tokio::fs::File::open(file).await?;
+    let r = bucket
+        .put_object_stream(&mut asset_file, &path_in_bucket)
+        .await?;
+    trace!("uploaded {} bytes for file {:?}", r.uploaded_bytes(), file);
+
+    Ok(PathBuf::from(path_in_bucket))
 }
