@@ -2,8 +2,10 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context, Error, Ok, Result};
+use futures::future::try_join_all;
 use itertools::Itertools;
 use simplelog::*;
+use tokio;
 
 use crate::builder::BuildResult;
 use crate::clients::bucket_client;
@@ -16,11 +18,52 @@ use crate::utils::TryJoinAll;
 pub async fn upload_assets(
     profile_name: &str,
     build_results: &[(&ChallengeConfig, BuildResult)],
-) -> Result<Vec<String>> {
+) -> Result<Vec<BuildResult>> {
     let profile = get_profile_config(profile_name)?;
     let enabled_challenges = enabled_challenges(profile_name)?;
 
     let bucket = bucket_client(&profile.s3)?;
 
-    todo!();
+    info!("uploading assets...");
+
+    // upload all files for each challenge
+    build_results
+        .iter()
+        .map(|(chal, result)| async move {
+            // upload all files for a specific challenge
+
+            debug!("uploading assets for chal {:?}", chal.directory);
+
+            let uploaded = result
+                .assets
+                .iter()
+                .map(|asset| async move {
+                    let path_in_bucket = format!(
+                        "assets/{chal_slug}/{file}",
+                        chal_slug = chal.directory.to_string_lossy(),
+                        file = asset.file_name().unwrap().to_string_lossy()
+                    );
+
+                    trace!("uploading {:?} to bucket path {:?}", asset, &path_in_bucket);
+
+                    // TODO: move to async/streaming to better handle large files and report progress
+                    let mut asset_file = tokio::fs::File::open(asset).await?;
+                    bucket.put_object_stream_blocking(&mut asset_file, &path_in_bucket)?;
+
+                    Ok(path_in_bucket.into())
+                })
+                .try_join_all()
+                .await
+                .with_context(|| {
+                    format!("failed to upload asset files for chal {:?}", chal.directory)
+                })?;
+
+            // return new BuildResult with assets as bucket path
+            Ok(BuildResult {
+                tags: result.tags.clone(),
+                assets: uploaded,
+            })
+        })
+        .try_join_all()
+        .await
 }
