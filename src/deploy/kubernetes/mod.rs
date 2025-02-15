@@ -7,6 +7,7 @@ use simplelog::*;
 
 use crate::builder::BuildResult;
 use crate::clients::kube_client;
+use crate::configparser::challenge::ExposeType;
 use crate::configparser::config::ProfileConfig;
 use crate::configparser::{get_config, get_profile_config, ChallengeConfig};
 use crate::utils::TryJoinAll;
@@ -39,18 +40,46 @@ pub async fn deploy_challenges(
 }
 
 async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> Result<()> {
+    info!("  deploying chal {:?}...", chal.directory);
     // render templates
 
-    let ns_manifest = minijinja::render!(templates::CHALLENGE_NAMESPACE, slug => chal.slugify());
-    trace!("NAMESPACE:\n{:#?}", ns_manifest);
+    let profile = get_profile_config(profile_name)?;
+
+    let ns_manifest = minijinja::render!(
+        templates::CHALLENGE_NAMESPACE,
+        chal, slug => chal.slugify()
+    );
+    trace!("NAMESPACE:\n{}", ns_manifest);
 
     for pod in &chal.pods {
+        let pod_image = chal.container_tag_for_pod(profile_name, &pod.name)?;
         let depl_manifest = minijinja::render!(
             templates::CHALLENGE_DEPLOYMENT,
-            chal, pod, profile_name, slug => chal.slugify(),
+            chal, pod, pod_image, profile_name, slug => chal.slugify(),
         );
+        trace!("DEPLOYMENT:\n{}", depl_manifest);
 
-        trace!("DEPLOYMENT:\n{:#?}", depl_manifest);
+        let (tcp_ports, http_ports): (Vec<_>, Vec<_>) = pod
+            .ports
+            .iter()
+            .partition(|p| matches!(p.expose, ExposeType::Tcp(_)));
+
+        if !tcp_ports.is_empty() {
+            let tcp_manifest = minijinja::render!(
+                templates::CHALLENGE_SERVICE_TCP,
+                chal, pod, tcp_ports, slug => chal.slugify(), domain => profile.challenges_domain
+            );
+            trace!("TCP SERVICE:\n{}", tcp_manifest);
+        }
+
+        if !http_ports.is_empty() {
+            let http_manifest = minijinja::render!(
+                templates::CHALLENGE_SERVICE_HTTP,
+                chal, pod, http_ports, slug => chal.slugify(), domain => profile.challenges_domain
+            );
+            trace!("HTTP INGRESS:\n{}", http_manifest);
+        }
     }
+
     Ok(())
 }

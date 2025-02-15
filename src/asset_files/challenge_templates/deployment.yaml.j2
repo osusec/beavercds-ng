@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: "{{ pod.name }}"
-          image: "{{ pod.image }}"
+          image: "{{ pod_image }}"
           ports:
             {% for p in pod.ports -%}
             - containerPort: {{ p.internal }}
