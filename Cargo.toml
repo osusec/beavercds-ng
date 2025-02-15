@@ -33,7 +33,7 @@ rust-s3 = { version = "0.35.1", default-features = false, features = [
   "fail-on-err",
   "tokio-rustls-tls",
 ] }
-minijinja = "2.6.0"
+minijinja = { version = "2.6.0", features = ["json"] }
 duct = "0.13.7"
 fastrand = "2.3.0"
 
