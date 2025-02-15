@@ -1,7 +1,3 @@
-{% set chal = whatever -%}
-{% set pod = whatever -%}
-{% set slug = chal.name | slugify -%}
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -9,13 +5,10 @@ metadata:
   name: "rcds-{{ slug }}-{{ pod.name }}"
   namespace: "rcds-{{ slug }}"
   annotations:
+    app.kubernetes.io/managed-by: rcds
     rctf/challenge: "{{ chal.name }}"
     rctf/category: "{{ chal.category }}"
-    rctf/description: "{{ chal.description }}"
-    rctf/flag: "{{ chal.flag }}"
-    rctf/points: "{{ chal.points }}"
-    rctf/files: "{{ chal.points }}"
-    app.kubernetes.io/managed-by: rcds
+    rctf/challenge-pod: "{{ pod.name }}"
 spec:
   selector:
     matchLabels:
@@ -32,16 +25,25 @@ spec:
           ports:
             {% for p in pod.ports -%}
             - containerPort: {{ p.internal }}
+            {%- else %}
+            []
             {%- endfor %}
+
           {% if pod.env -%}
           env:
             {% for k, v in pod.env -%}
             - { name: "{{ k }}", value: "{{ v }}" }
+            {%- else %}
+            []
             {%- endfor %}
           {%- endif %}
+
+          {% if pod.resources -%}
           resources:
-            requests: {{ pod.resources | json_encode() | safe }}
-            limits: {{ pod.resources | json_encode() | safe }}
+            {# TODO: use defaults from rcds config -#}
+            requests: {{ pod.resources | tojson }}
+            limits: {{ pod.resources | tojson }}
+          {%- endif %}
 
       # don't give chal pods k8s api tokens
       automountServiceAccountToken: false
