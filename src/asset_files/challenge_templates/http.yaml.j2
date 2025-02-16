@@ -25,7 +25,7 @@ metadata:
   annotations:
     app.kubernetes.io/managed-by: rcds
 spec:
-  ingressClassName: beaverctf-nginx
+  ingressClassName: beavercds
   rules:
   {%- for p in http_ports %}
     - host: "{{ p.expose.http }}.{{ domain }}"
