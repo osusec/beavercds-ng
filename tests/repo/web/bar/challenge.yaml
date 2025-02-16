@@ -20,4 +20,7 @@ pods:
     ports:
       - internal: 80
         expose:
-          http: bar.chals.frontend.example
+          http: bar
+    # resources:
+    #   cpu: 10
+    #   memory: 500Mi
