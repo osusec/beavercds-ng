@@ -6,7 +6,7 @@ use minijinja;
 use simplelog::*;
 
 use crate::builder::BuildResult;
-use crate::clients::kube_client;
+use crate::clients::{apply_manifest_yaml, kube_client};
 use crate::configparser::challenge::ExposeType;
 use crate::configparser::config::ProfileConfig;
 use crate::configparser::{get_config, get_profile_config, ChallengeConfig};
@@ -45,11 +45,16 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
 
     let profile = get_profile_config(profile_name)?;
 
+    let kube = kube_client(profile).await?;
+
     let ns_manifest = minijinja::render!(
         templates::CHALLENGE_NAMESPACE,
         chal, slug => chal.slugify()
     );
     trace!("NAMESPACE:\n{}", ns_manifest);
+
+    debug!("applying namespace for chal {:?}", chal.directory);
+    apply_manifest_yaml(&kube, &ns_manifest).await?;
 
     for pod in &chal.pods {
         let pod_image = chal.container_tag_for_pod(profile_name, &pod.name)?;
@@ -59,6 +64,13 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
         );
         trace!("DEPLOYMENT:\n{}", depl_manifest);
 
+        debug!(
+            "applying deployment for chal {:?} pod {:?}",
+            chal.directory, pod.name
+        );
+        apply_manifest_yaml(&kube, &depl_manifest).await?;
+
+        // tcp and http exposes need to he handled separately, so separate them by type
         let (tcp_ports, http_ports): (Vec<_>, Vec<_>) = pod
             .ports
             .iter()
@@ -70,6 +82,12 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
                 chal, pod, tcp_ports, slug => chal.slugify(), domain => profile.challenges_domain
             );
             trace!("TCP SERVICE:\n{}", tcp_manifest);
+
+            debug!(
+                "applying tcp service for chal {:?} pod {:?}",
+                chal.directory, pod.name
+            );
+            apply_manifest_yaml(&kube, &tcp_manifest).await?;
         }
 
         if !http_ports.is_empty() {
@@ -78,6 +96,12 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
                 chal, pod, http_ports, slug => chal.slugify(), domain => profile.challenges_domain
             );
             trace!("HTTP INGRESS:\n{}", http_manifest);
+
+            debug!(
+                "applying http service and ingress for chal {:?} pod {:?}",
+                chal.directory, pod.name
+            );
+            apply_manifest_yaml(&kube, &http_manifest).await?;
         }
     }
 
