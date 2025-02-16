@@ -19,7 +19,7 @@ use serde_yml;
 use simplelog::*;
 use tempfile;
 
-use crate::clients::{kube_api_for, kube_client, kube_resource_for};
+use crate::clients::{apply_manifest_yaml, kube_client};
 use crate::configparser::{config, get_config, get_profile_config};
 
 // Deploy cluster resources needed for challenges to work.
@@ -68,7 +68,7 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     // letsencrypt and letsencrypt-staging
     const ISSUERS_YAML: &str =
         include_str!("../asset_files/setup_manifests/letsencrypt.issuers.yaml");
-    apply_manifest_yaml(client, ISSUERS_YAML).await
+    apply_manifest_yaml(&client, ISSUERS_YAML).await
 }
 
 pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
@@ -165,63 +165,4 @@ fn install_helm_chart(
     }
 
     Ok(())
-}
-
-/// Apply multi-document manifest file
-async fn apply_manifest_yaml(client: kube::Client, manifest: &str) -> Result<()> {
-    // set ourself as the owner for managed fields
-    // https://kubernetes.io/docs/reference/using-api/server-side-apply/#managers
-    let pp = PatchParams::apply("beavercds").force();
-
-    // this manifest has multiple documents (crds, deployment)
-    for yaml in multidoc_deserialize(manifest)? {
-        let obj: DynamicObject = serde_yml::from_value(yaml)?;
-        debug!(
-            "applying resource {} {}",
-            obj.types.clone().unwrap_or_default().kind,
-            obj.name_any()
-        );
-
-        let obj_api = kube_api_for(&obj, client.clone()).await?;
-        match obj_api
-            // patch is idempotent and will create if not present
-            .patch(&obj.name_any(), &pp, &Patch::Apply(&obj))
-            .await
-        {
-            Ok(d) => Ok(()),
-            // if error is from cluster api, mark it as such
-            Err(kube::Error::Api(ae)) => {
-                // Err(kube::Error::Api(ae).into())
-                Err(anyhow!(ae).context("error from cluster when deploying"))
-            }
-            // other errors could be anything
-            Err(e) => Err(anyhow!(e)).context("unknown error when deploying"),
-        }?;
-    }
-
-    Ok(())
-}
-
-/// Deserialize multi-document yaml string into a Vec of the documents
-fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yml::Value>> {
-    use serde::Deserialize;
-
-    let mut docs = vec![];
-    for de in serde_yml::Deserializer::from_str(data) {
-        match serde_yml::Value::deserialize(de)? {
-            // discard any empty documents (e.g. from trailing ---)
-            serde_yml::Value::Null => (),
-            not_null => docs.push(not_null),
-        };
-    }
-    Ok(docs)
-
-    // // deserialize all chunks
-    // serde_yml::Deserializer::from_str(data)
-    //     .map(serde_yml::Value::deserialize)
-    //     // discard any empty documents (e.g. from trailing ---)
-    //     .filter_ok(|val| val != &serde_yml::Value::Null)
-    //     // coerce errors to Anyhow
-    //     .map(|r| r.map_err(|e| e.into()))
-    //     .collect()
 }

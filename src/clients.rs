@@ -5,7 +5,7 @@ use bollard;
 use futures::TryFutureExt;
 use kube::{
     self,
-    api::{DynamicObject, GroupVersionKind, TypeMeta},
+    api::{DynamicObject, GroupVersionKind, Patch, PatchParams, TypeMeta},
     core::ResourceExt,
     discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
 };
@@ -172,4 +172,63 @@ pub async fn kube_api_for(
     } else {
         Ok(kube::Api::default_namespaced_with(client, &resource))
     }
+}
+
+/// Apply multi-document manifest file
+pub async fn apply_manifest_yaml(client: &kube::Client, manifest: &str) -> Result<()> {
+    // set ourself as the owner for managed fields
+    // https://kubernetes.io/docs/reference/using-api/server-side-apply/#managers
+    let pp = PatchParams::apply("beavercds").force();
+
+    // this manifest has multiple documents (crds, deployment)
+    for yaml in multidoc_deserialize(manifest)? {
+        let obj: DynamicObject = serde_yml::from_value(yaml)?;
+        debug!(
+            "applying resource {} {}",
+            obj.types.clone().unwrap_or_default().kind,
+            obj.name_any()
+        );
+
+        let obj_api = kube_api_for(&obj, client.clone()).await?;
+        match obj_api
+            // patch is idempotent and will create if not present
+            .patch(&obj.name_any(), &pp, &Patch::Apply(&obj))
+            .await
+        {
+            Ok(d) => Ok(()),
+            // if error is from cluster api, mark it as such
+            Err(kube::Error::Api(ae)) => {
+                // Err(kube::Error::Api(ae).into())
+                Err(anyhow!(ae).context("error from cluster when deploying"))
+            }
+            // other errors could be anything
+            Err(e) => Err(anyhow!(e)).context("unknown error when deploying"),
+        }?;
+    }
+
+    Ok(())
+}
+
+/// Deserialize multi-document yaml string into a Vec of the documents
+fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yml::Value>> {
+    use serde::Deserialize;
+
+    let mut docs = vec![];
+    for de in serde_yml::Deserializer::from_str(data) {
+        match serde_yml::Value::deserialize(de)? {
+            // discard any empty documents (e.g. from trailing ---)
+            serde_yml::Value::Null => (),
+            not_null => docs.push(not_null),
+        };
+    }
+    Ok(docs)
+
+    // // deserialize all chunks
+    // serde_yml::Deserializer::from_str(data)
+    //     .map(serde_yml::Value::deserialize)
+    //     // discard any empty documents (e.g. from trailing ---)
+    //     .filter_ok(|val| val != &serde_yml::Value::Null)
+    //     // coerce errors to Anyhow
+    //     .map(|r| r.map_err(|e| e.into()))
+    //     .collect()
 }
