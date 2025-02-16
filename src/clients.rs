@@ -174,11 +174,16 @@ pub async fn kube_api_for(
     }
 }
 
-/// Apply multi-document manifest file
-pub async fn apply_manifest_yaml(client: &kube::Client, manifest: &str) -> Result<()> {
+/// Apply multi-document manifest file, return created resources
+pub async fn apply_manifest_yaml(
+    client: &kube::Client,
+    manifest: &str,
+) -> Result<Vec<DynamicObject>> {
     // set ourself as the owner for managed fields
     // https://kubernetes.io/docs/reference/using-api/server-side-apply/#managers
     let pp = PatchParams::apply("beavercds").force();
+
+    let mut results = vec![];
 
     // this manifest has multiple documents (crds, deployment)
     for yaml in multidoc_deserialize(manifest)? {
@@ -195,7 +200,10 @@ pub async fn apply_manifest_yaml(client: &kube::Client, manifest: &str) -> Resul
             .patch(&obj.name_any(), &pp, &Patch::Apply(&obj))
             .await
         {
-            Ok(d) => Ok(()),
+            Ok(d) => {
+                results.push(d);
+                Ok(())
+            }
             // if error is from cluster api, mark it as such
             Err(kube::Error::Api(ae)) => {
                 // Err(kube::Error::Api(ae).into())
@@ -206,7 +214,7 @@ pub async fn apply_manifest_yaml(client: &kube::Client, manifest: &str) -> Resul
         }?;
     }
 
-    Ok(())
+    Ok(results)
 }
 
 /// Deserialize multi-document yaml string into a Vec of the documents

@@ -68,7 +68,9 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     // letsencrypt and letsencrypt-staging
     const ISSUERS_YAML: &str =
         include_str!("../asset_files/setup_manifests/letsencrypt.issuers.yaml");
-    apply_manifest_yaml(&client, ISSUERS_YAML).await
+    apply_manifest_yaml(&client, ISSUERS_YAML).await?;
+
+    Ok(())
 }
 
 pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
