@@ -14,11 +14,22 @@ use crate::utils::TryJoinAll;
 
 pub mod templates;
 
+/// How and where a challenge was deployed/exposed at
+pub struct DeployResult {
+    // challenges could have multiple exposed services
+    pub exposed: Vec<PodDeployResult>,
+}
+
+pub enum PodDeployResult {
+    Http { domain: String },
+    Tcp { port: usize },
+}
+
 /// Render challenge manifest templates and apply to cluster
 pub async fn deploy_challenges(
     profile_name: &str,
     build_results: &[(&ChallengeConfig, BuildResult)],
-) -> Result<Vec<()>> {
+) -> Result<Vec<DeployResult>> {
     let profile = get_profile_config(profile_name)?;
 
     // Kubernetes deployment needs to:
@@ -30,16 +41,29 @@ pub async fn deploy_challenges(
     //
     // 2. update ingress controller tcp ports
     //
-    // 3. wait for all challenges to become ready (?)
+    // 3. wait for all challenges to become ready
+    //
+    // 4. record domains and IPs of challenges to pass to frontend (?)
 
-    build_results
+    let results = build_results
         .iter()
         .map(|(chal, _)| deploy_single_challenge(profile_name, chal))
         .try_join_all()
-        .await
+        .await?;
+
+    update_ingress_tcp().await?;
+
+    Ok(results)
 }
 
-async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> Result<()> {
+// Deploy all K8S resources for a single challenge `chal`.
+//
+// Creates the challenge namespace, deployments, services, and ingresses needed
+// to deploy and expose the challenge.
+async fn deploy_single_challenge(
+    profile_name: &str,
+    chal: &ChallengeConfig,
+) -> Result<DeployResult> {
     info!("  deploying chal {:?}...", chal.directory);
     // render templates
 
@@ -55,6 +79,8 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
 
     debug!("applying namespace for chal {:?}", chal.directory);
     apply_manifest_yaml(&kube, &ns_manifest).await?;
+
+    let expose_results = DeployResult { exposed: vec![] };
 
     for pod in &chal.pods {
         let pod_image = chal.container_tag_for_pod(profile_name, &pod.name)?;
@@ -88,6 +114,9 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
                 chal.directory, pod.name
             );
             apply_manifest_yaml(&kube, &tcp_manifest).await?;
+
+            // TODO:
+            // expose_results.exposed.push(PodDeployResult::Tcp { port: tcp_ports[0]. });
         }
 
         if !http_ports.is_empty() {
@@ -105,5 +134,12 @@ async fn deploy_single_challenge(profile_name: &str, chal: &ChallengeConfig) -> 
         }
     }
 
+    Ok(expose_results)
+}
+
+// Updates the current ingress controller chart with the current set of TCP
+// ports needed for challenges.
+// TODO: move to Gateway to avoid needing to redeploy ingress?
+async fn update_ingress_tcp() -> Result<()> {
     Ok(())
 }
