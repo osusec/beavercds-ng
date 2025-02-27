@@ -1,12 +1,14 @@
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Error, Ok, Result};
 use itertools::Itertools;
 use minijinja;
 use simplelog::*;
+use tokio::time::timeout;
 
 use crate::builder::BuildResult;
-use crate::clients::{apply_manifest_yaml, kube_client};
+use crate::clients::{apply_manifest_yaml, kube_client, wait_for_status};
 use crate::configparser::challenge::ExposeType;
 use crate::configparser::config::ProfileConfig;
 use crate::configparser::{get_config, get_profile_config, ChallengeConfig};
@@ -78,9 +80,17 @@ async fn deploy_single_challenge(
     trace!("NAMESPACE:\n{}", ns_manifest);
 
     debug!("applying namespace for chal {:?}", chal.directory);
-    apply_manifest_yaml(&kube, &ns_manifest).await?;
 
-    let expose_results = DeployResult { exposed: vec![] };
+    // apply namespace manifest
+    apply_manifest_yaml(&kube, &ns_manifest)
+        .await?
+        .iter()
+        // and then wait for it to be ready
+        .map(|object| wait_for_status(&kube, object))
+        .try_join_all()
+        .await?;
+
+    let results = DeployResult { exposed: vec![] };
 
     for pod in &chal.pods {
         let pod_image = chal.container_tag_for_pod(profile_name, &pod.name)?;
@@ -94,7 +104,26 @@ async fn deploy_single_challenge(
             "applying deployment for chal {:?} pod {:?}",
             chal.directory, pod.name
         );
-        apply_manifest_yaml(&kube, &depl_manifest).await?;
+        let depl = apply_manifest_yaml(&kube, &depl_manifest).await?;
+        for object in depl {
+            // wait for objects to be ready, with 5m timeout
+            timeout(Duration::from_secs(5 * 60), wait_for_status(&kube, &object))
+                .await
+                // timeout wraps with another Result
+                .with_context(|| {
+                    format!(
+                        "timed out waiting for chal {:?} pod {:?} deployment to become ready",
+                        chal.directory, pod.name
+                    )
+                })?
+                // inner result from wait_for_status
+                .with_context(|| {
+                    format!(
+                        "failed to get status for chal {:?} pod {:?} deployment",
+                        chal.directory, pod.name
+                    )
+                })?;
+        }
 
         // tcp and http exposes need to he handled separately, so separate them by type
         let (tcp_ports, http_ports): (Vec<_>, Vec<_>) = pod
@@ -113,7 +142,26 @@ async fn deploy_single_challenge(
                 "applying tcp service for chal {:?} pod {:?}",
                 chal.directory, pod.name
             );
-            apply_manifest_yaml(&kube, &tcp_manifest).await?;
+            let tcp = apply_manifest_yaml(&kube, &tcp_manifest).await?;
+            for object in tcp {
+                // wait for objects to be ready, with 5m timeout
+                timeout(Duration::from_secs(5 * 60), wait_for_status(&kube, &object))
+                    .await
+                    // timeout wraps with another Result
+                    .with_context(|| {
+                        format!(
+                            "timed out waiting for chal {:?} pod {:?} exposed TCP service to become ready",
+                            chal.directory, pod.name
+                        )
+                    })?
+                    // inner result from wait_for_status
+                    .with_context(|| {
+                        format!(
+                            "failed to get status for chal {:?} pod {:?} exposed TCP service",
+                            chal.directory, pod.name
+                        )
+                    })?;
+            }
 
             // TODO:
             // expose_results.exposed.push(PodDeployResult::Tcp { port: tcp_ports[0]. });
@@ -130,11 +178,30 @@ async fn deploy_single_challenge(
                 "applying http service and ingress for chal {:?} pod {:?}",
                 chal.directory, pod.name
             );
-            apply_manifest_yaml(&kube, &http_manifest).await?;
+            let ingress = apply_manifest_yaml(&kube, &http_manifest).await?;
+            for object in ingress {
+                // wait for objects to be ready, with 5m timeout
+                timeout(Duration::from_secs(5 * 60), wait_for_status(&kube, &object))
+                    .await
+                    // timeout wraps with another Result
+                    .with_context(|| {
+                        format!(
+                            "timed out waiting for chal {:?} pod {:?} ingress to become ready",
+                            chal.directory, pod.name
+                        )
+                    })?
+                    // inner result from wait_for_status
+                    .with_context(|| {
+                        format!(
+                            "failed to get status for chal {:?} pod {:?} ingress",
+                            chal.directory, pod.name
+                        )
+                    })?;
+            }
         }
     }
 
-    Ok(expose_results)
+    Ok(results)
 }
 
 // Updates the current ingress controller chart with the current set of TCP

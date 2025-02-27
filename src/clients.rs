@@ -3,11 +3,17 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use bollard;
 use futures::TryFutureExt;
+use k8s_openapi::api::{
+    apps::v1::Deployment,
+    core::v1::{Pod, Service},
+    networking::v1::Ingress,
+};
 use kube::{
     self,
-    api::{DynamicObject, GroupVersionKind, Patch, PatchParams, TypeMeta},
+    api::{DynamicObject, GroupVersionKind, Patch, PatchParams},
     core::ResourceExt,
-    discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
+    discovery::{ApiCapabilities, ApiResource},
+    runtime::{conditions, wait::await_condition},
 };
 use s3;
 use simplelog::*;
@@ -239,4 +245,108 @@ fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yml::Value>> {
     //     // coerce errors to Anyhow
     //     .map(|r| r.map_err(|e| e.into()))
     //     .collect()
+}
+
+/// Check the status of the passed object and wait for it to become ready.
+///
+/// This function does not provide a timeout. Callers will need to wrap this with a timeout instead.
+pub async fn wait_for_status(client: &kube::Client, object: &DynamicObject) -> Result<()> {
+    debug!(
+        "waiting for ok status for {} {}",
+        object.types.clone().unwrap_or_default().kind,
+        object.name_any()
+    );
+
+    // handle each separate object type differently
+    match object.types.clone().unwrap_or_default().kind.as_str() {
+        // wait for Pod to become running
+        "Pod" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            let x = await_condition(api, &object.name_any(), conditions::is_pod_running()).await?;
+        }
+
+        // wait for Deployment to complete rollout
+        "Deployment" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            await_condition(api, &object.name_any(), |d: Option<&Deployment>| {
+                // Use a nested function so that we can use Option? returns (the outer closure returns `bool`)
+                // TODO: switch to try { } when that is standardized
+                /// Replicate the upstream deployment complete check
+                /// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#complete-deployment
+                fn depl_complete(d: Option<&Deployment>) -> Option<bool> {
+                    Some(d?.status.as_ref()?.conditions.as_ref()?.iter().any(|c| {
+                        c.reason == Some("NewReplicaSetAvailable".to_string()) && c.status == "True"
+                    }))
+                }
+                depl_complete(d).unwrap_or(false)
+            })
+            .await?;
+        }
+
+        // wait for Ingress to get IP from ingress controller
+        "Ingress" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            await_condition(api, &object.name_any(), |i: Option<&Ingress>| {
+                // Use nested function for Option ?, like above.
+                /// Wait for ingress controller to update this with its external ip
+                fn ingress_ip(i: Option<&Ingress>) -> Option<bool> {
+                    Some(
+                        // bleh, this as_ref stuff is unavoidable
+                        i?.status
+                            .as_ref()?
+                            .load_balancer
+                            .as_ref()?
+                            .ingress
+                            .as_ref()?
+                            .iter()
+                            // TODO: should this be any()? all controllers I've seen only add .ip here
+                            .all(|ip| ip.hostname.is_some() || ip.ip.is_some()),
+                    )
+                }
+                ingress_ip(i).unwrap_or(false)
+            })
+            .await?;
+        }
+
+        // wait for LoadBalancer service to get IP
+        "Service" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            let svc: Service = api.get(&object.name_any()).await?;
+
+            // we only care about checking LoadBalancer-type services, return Ok
+            // for any non-LB services
+            //
+            // TODO: do we care about NodePorts? don't need to check any atm
+            if svc.spec.unwrap_or_default().type_ != Some("LoadBalancer".to_string()) {
+                trace!(
+                    "not checking status for internal service {}",
+                    object.name_any()
+                );
+                return Ok(());
+            }
+
+            await_condition(api, &object.name_any(), |s: Option<&Service>| {
+                /// Wait for LoadBalancer to get external IP
+                fn lb_ip(s: Option<&Service>) -> Option<bool> {
+                    Some(
+                        // bleh, this as_ref stuff is unavoidable
+                        s?.status
+                            .as_ref()?
+                            .load_balancer
+                            .as_ref()?
+                            .ingress
+                            .as_ref()?
+                            .iter()
+                            .all(|ip| ip.hostname.is_some() || ip.ip.is_some()),
+                    )
+                }
+                lb_ip(s).unwrap_or(false)
+            })
+            .await?;
+        }
+
+        other => trace!("not checking status for resource type {other}"),
+    };
+
+    Ok(())
 }
