@@ -162,6 +162,20 @@ impl ChallengeConfig {
             )),
         }
     }
+
+    /// Create challenge category-name slug from directory path
+    pub fn slugify(&self) -> String {
+        self.slugify_slash().replace("/", "-")
+    }
+
+    /// Create challenge category/name slug from directory path, with category slash
+    pub fn slugify_slash(&self) -> String {
+        self.directory
+            .to_string_lossy()
+            .to_lowercase()
+            .split_whitespace()
+            .join("-")
+    }
 }
 
 fn default_difficulty() -> i64 {

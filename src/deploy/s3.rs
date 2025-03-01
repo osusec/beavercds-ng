@@ -9,6 +9,7 @@ use crate::builder::BuildResult;
 use crate::clients::bucket_client;
 use crate::configparser::config::ProfileConfig;
 use crate::configparser::{enabled_challenges, get_config, get_profile_config, ChallengeConfig};
+use crate::utils::TryJoinAll;
 
 /// Upload files to frontend asset bucket
 /// Returns urls of upload files.

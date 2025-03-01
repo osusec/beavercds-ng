@@ -1,0 +1,4 @@
+mirrors:
+  "localhost:5000":
+    endpoint:
+      - http://tests-registry-server-1:5000

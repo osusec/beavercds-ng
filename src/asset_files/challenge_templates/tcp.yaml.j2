@@ -1,26 +1,21 @@
-{% set chal = whatever -%}
-{% set pod = current from chal -%}
-{% set rcds = global rcds yaml -%}
-{% set slug = chal.name | slugify -%}
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: "rcds-{{ slug }}-{{ pod.name }}"
+  name: "rcds-{{ slug }}-{{ pod.name }}-tcp"
   namespace: "rcds-{{ slug }}"
   annotations:
     app.kubernetes.io/managed-by: rcds
     # still use separate domain for these, since exposed LoadBalancer services
     # will all have different ips from each other
-    external-dns.alpha.kubernetes.io/hostname: "{{ slug }}.{{ rcds.domain }}"
+    external-dns.alpha.kubernetes.io/hostname: "{{ slug }}.{{ domain }}"
 spec:
   type: LoadBalancer
   selector:
     rctf/part-of: "{{ slug }}-{{ pod.name }}"
   ports:
-  {% for p in pod.ports | filter(attribute="expose.tcp") -%}
+  {%- for p in tcp_ports %}
     - port: {{ p.expose.tcp }}
       targetPort: {{ p.internal }}
       protocol: TCP
-  {%- endfor %}
+  {% endfor -%}
