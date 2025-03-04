@@ -1,3 +1,4 @@
+use anyhow::Result;
 use simplelog::*;
 use std::process::exit;
 
@@ -6,14 +7,11 @@ use crate::configparser::{get_config, get_profile_config};
 use crate::deploy;
 
 #[tokio::main(flavor = "current_thread")] // make this a sync function
-pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
+pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) -> Result<()> {
     let profile = get_profile_config(profile_name).unwrap();
 
     // has the cluster been setup?
-    if let Err(e) = deploy::check_setup(profile).await {
-        error!("{e:?}");
-        exit(1);
-    }
+    deploy::check_setup(profile).await?;
 
     // build before deploying
     if *no_build {
@@ -23,13 +21,7 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
     }
 
     info!("building challenges...");
-    let build_results = match build_challenges(profile_name, true, true).await {
-        Ok(result) => result,
-        Err(e) => {
-            error!("{e:?}");
-            exit(1);
-        }
-    };
+    let build_results = build_challenges(profile_name, true, true).await?;
 
     // deploy needs to:
     // A) render kubernetes manifests
@@ -42,22 +34,15 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) {
 
     // A)
     info!("deploying challenges...");
-    if let Err(e) = deploy::kubernetes::deploy_challenges(profile_name, &build_results).await {
-        error!("{e:?}");
-        exit(1);
-    }
+    deploy::kubernetes::deploy_challenges(profile_name, &build_results).await?;
 
     // B)
     info!("deploying challenges...");
-    if let Err(e) = deploy::s3::upload_assets(profile_name, &build_results).await {
-        error!("{e:?}");
-        exit(1);
-    }
+    deploy::s3::upload_assets(profile_name, &build_results).await?;
 
     // A)
     info!("deploying challenges...");
-    if let Err(e) = deploy::frontend::update_frontend(profile_name, &build_results).await {
-        error!("{e:?}");
-        exit(1);
-    }
+    deploy::frontend::update_frontend(profile_name, &build_results).await?;
+
+    Ok(())
 }
