@@ -8,14 +8,14 @@ use crate::configparser::{get_config, get_profile_config};
 use crate::deploy;
 
 #[tokio::main(flavor = "current_thread")] // make this a sync function
-pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) -> Result<()> {
+pub async fn run(profile_name: &str, no_build: bool, _dry_run: bool) -> Result<()> {
     let profile = get_profile_config(profile_name).unwrap();
 
     // has the cluster been setup?
     deploy::check_setup(profile).await?;
 
     // build before deploying
-    if *no_build {
+    if no_build {
         warn!("");
         warn!("Not building before deploying! are you sure this is a good idea?");
         warn!("");

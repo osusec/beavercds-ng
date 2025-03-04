@@ -8,10 +8,10 @@ use crate::configparser::{get_config, get_profile_config};
 
 pub fn run(
     profile: &str,
-    kubernetes: &bool,
-    frontend: &bool,
-    registry: &bool,
-    bucket: &bool,
+    kubernetes: bool,
+    frontend: bool,
+    registry: bool,
+    bucket: bool,
 ) -> Result<()> {
     // if user did not give a specific check, check all of them
     let check_all = !kubernetes && !frontend && !registry && !bucket;
@@ -30,10 +30,10 @@ pub fn run(
                 profile_name, // associate profile name to results
                 check_profile(
                     profile_name,
-                    *kubernetes || check_all,
-                    *frontend || check_all,
-                    *registry || check_all,
-                    *bucket || check_all,
+                    kubernetes || check_all,
+                    frontend || check_all,
+                    registry || check_all,
+                    bucket || check_all,
                 ),
             )
         })
