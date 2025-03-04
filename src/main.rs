@@ -43,7 +43,7 @@ fn dispatch(cli: cli::Cli) -> anyhow::Result<()> {
             bucket,
         } => {
             commands::validate::run()?;
-            commands::check_access::run(profile, kubernetes, frontend, registry, bucket)
+            commands::check_access::run(profile, *kubernetes, *frontend, *registry, *bucket)
         }
 
         #[allow(unused_variables)]
@@ -54,7 +54,7 @@ fn dispatch(cli: cli::Cli) -> anyhow::Result<()> {
             extract_assets,
         } => {
             commands::validate::run()?;
-            commands::build::run(profile, &!no_push, extract_assets)
+            commands::build::run(profile, !no_push, *extract_assets)
         }
 
         cli::Commands::Deploy {
@@ -63,7 +63,7 @@ fn dispatch(cli: cli::Cli) -> anyhow::Result<()> {
             dry_run,
         } => {
             commands::validate::run()?;
-            commands::deploy::run(profile, no_build, dry_run)
+            commands::deploy::run(profile, *no_build, *dry_run)
         }
 
         cli::Commands::ClusterSetup { profile } => {
