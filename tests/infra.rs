@@ -1,8 +1,6 @@
-use std::env;
-use std::sync::LazyLock;
-
+use figment::Jail;
 use testcontainers::{
-    core::{wait::HttpWaitStrategy, IntoContainerPort, WaitFor},
+    core::{wait::HttpWaitStrategy, IntoContainerPort, Mount, WaitFor},
     GenericImage,
 };
 use testcontainers_modules::{
@@ -12,30 +10,39 @@ use testcontainers_modules::{
     testcontainers::{core::ExecCommand, runners::SyncRunner, Container, ImageExt},
 };
 
-// use lock to cd only once
-static IN_DIR: LazyLock<()> = LazyLock::new(|| env::set_current_dir("./tests/repo").unwrap());
-pub fn cd_to_repo() {
-    let _ = &*IN_DIR;
+/// Extract bundled test directory into Figment jailoo
+#[allow(dead_code)] // this is actually included in tests
+pub fn setup_test_repo(j: &Jail) -> Result<(), std::io::Error> {
+    TEST_REPO_DIR.extract(j.directory())?;
+
+    Ok(())
 }
+#[allow(dead_code)] // this is actually included in tests
+static TEST_REPO_DIR: include_dir::Dir =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/tests/repo/");
 
 #[allow(dead_code)] // this is actually included in tests
-pub fn registry_ctr() -> Container<CncfDistribution> {
+pub fn registry_ctr(j: &mut Jail) -> Container<CncfDistribution> {
     let registry = CncfDistribution.start().unwrap();
 
-    env::set_var(
+    let vars = [(
         "BEAVERCDS_REGISTRY_DOMAIN",
         format!(
             "{}:{}/testimages",
             registry.get_host().unwrap(),
             registry.get_host_port_ipv4(5000).unwrap()
         ),
-    );
+    )];
+
+    for (k, v) in vars {
+        j.set_env(k, v);
+    }
 
     registry
 }
 
 #[allow(dead_code)] // this is actually included in tests
-pub fn s3_ctr() -> Container<GenericImage> {
+pub fn s3_ctr(j: &mut Jail) -> Container<GenericImage> {
     // minio preset does not work with recent image, so make our own from generic
     // let minio = MinIO::default()
 
@@ -68,7 +75,7 @@ pub fn s3_ctr() -> Container<GenericImage> {
         .unwrap();
 
     // set envvars to point at this container
-    env::set_var(
+    j.set_env(
         "BEAVERCDS_PROFILES_TESTING_S3_ENDPOINT",
         format!(
             "http://{}:{}",
@@ -76,20 +83,20 @@ pub fn s3_ctr() -> Container<GenericImage> {
             minio.get_host_port_ipv4(9000).unwrap()
         ),
     );
-    env::set_var("BEAVERCDS_PROFILES_TESTING_S3_REGION", "");
-    env::set_var("BEAVERCDS_PROFILES_TESTING_S3_ACCESS_KEY", "testuser");
-    env::set_var("BEAVERCDS_PROFILES_TESTING_S3_SECRET_KEY", "notsecure");
+    j.set_env("BEAVERCDS_PROFILES_TESTING_S3_REGION", "");
+    j.set_env("BEAVERCDS_PROFILES_TESTING_S3_ACCESS_KEY", "testuser");
+    j.set_env("BEAVERCDS_PROFILES_TESTING_S3_SECRET_KEY", "notsecure");
 
     minio
 }
 
 #[allow(dead_code)] // this is actually included in tests
-pub fn k3s_ctr() -> Container<K3s> {
+pub fn k3s_ctr(j: &mut Jail) -> Container<K3s> {
     let kubeconf_tempdir = tempfile::tempdir().unwrap();
     let k3s_instance = K3s::default()
         .with_conf_mount(&kubeconf_tempdir)
-        // .with_privileged(true)
-        .with_userns_mode("host")
+        .with_privileged(true)
+        // .with_cmd(["server", "--disable=traefik@server:*", "--rootless"])
         .start()
         .unwrap();
 
@@ -99,11 +106,11 @@ pub fn k3s_ctr() -> Container<K3s> {
     //     .read_kube_config()
     //     .expect("Cannot read kube conf");
 
-    env::set_var(
+    j.set_env(
         "BEAVERCDS_PROFILES_TESTING_KUBECONFIG",
-        kubeconf_tempdir.path(),
+        kubeconf_tempdir.path().to_string_lossy(),
     );
-    env::set_var("BEAVERCDS_PROFILES_TESTING_KUBECONTEXT", "default");
+    j.set_env("BEAVERCDS_PROFILES_TESTING_KUBECONTEXT", "default");
 
     k3s_instance
 }

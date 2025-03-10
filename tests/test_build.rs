@@ -1,5 +1,4 @@
 use pretty_assertions::assert_eq;
-use serial_test::serial;
 use test_log::test;
 
 use beavercds_ng::commands::build;
@@ -8,42 +7,49 @@ mod infra;
 use infra::*;
 
 #[test]
-#[serial]
 fn test_challenge_build() {
-    let _registry = registry_ctr();
-    cd_to_repo();
+    figment::Jail::expect_with(|jail| {
+        setup_test_repo(jail).unwrap();
+        let _r = registry_ctr(jail);
 
-    // build and push but don't extract
-    let result = build::run("testing", true, false);
+        // build and push but don't extract
+        let result = build::run("testing", true, false);
+        println!("{result:?}");
 
-    assert!(result.is_ok())
+        assert!(result.is_ok());
 
-    // TODO: check for images on registry (shell out to docker? bring in bollard?)
+        Ok(())
+    });
 }
 
 #[test]
-#[serial]
 fn test_artifact_extract() {
-    cd_to_repo();
+    figment::Jail::expect_with(|jail| {
+        setup_test_repo(jail).unwrap();
+        let _r = registry_ctr(jail);
 
-    // build and extract but don't push
-    let result = build::run("testing", false, true);
+        // build and extract but don't push
+        let result = build::run("testing", false, true);
+        println!("{result:?}");
 
-    assert!(result.is_ok());
+        assert!(result.is_ok());
 
-    // check extracted files are present disk and approx correct size
-    assert!(std::fs::metadata("pwn/notsh/libc.so.6").is_ok());
-    assert_eq!(
-        std::fs::metadata("pwn/notsh/libc.so.6").unwrap().len(),
-        2030928
-    );
+        // check extracted files are present disk and approx correct size
+        assert!(std::fs::metadata("pwn/notsh/libc.so.6").is_ok());
+        assert_eq!(
+            std::fs::metadata("pwn/notsh/libc.so.6").unwrap().len(),
+            2030928
+        );
 
-    assert!(std::fs::metadata("pwn/notsh/notsh").is_ok());
-    assert_eq!(std::fs::metadata("pwn/notsh/notsh").unwrap().len(), 8744);
+        assert!(std::fs::metadata("pwn/notsh/notsh").is_ok());
+        assert_eq!(std::fs::metadata("pwn/notsh/notsh").unwrap().len(), 8744);
 
-    assert!(std::fs::metadata("pwn/notsh/notsh.zip").is_ok());
-    assert_eq!(
-        std::fs::metadata("pwn/notsh/notsh.zip").unwrap().len(),
-        888175
-    );
+        assert!(std::fs::metadata("pwn/notsh/notsh.zip").is_ok());
+        assert_eq!(
+            std::fs::metadata("pwn/notsh/notsh.zip").unwrap().len(),
+            888175
+        );
+
+        Ok(())
+    });
 }
