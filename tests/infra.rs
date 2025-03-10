@@ -1,12 +1,11 @@
 use figment::Jail;
 use testcontainers::{
-    core::{wait::HttpWaitStrategy, IntoContainerPort, Mount, WaitFor},
+    core::{wait::HttpWaitStrategy, IntoContainerPort, WaitFor},
     GenericImage,
 };
 use testcontainers_modules::{
     cncf_distribution::CncfDistribution,
     k3s::K3s,
-    // minio::MinIO,
     testcontainers::{core::ExecCommand, runners::SyncRunner, Container, ImageExt},
 };
 
@@ -46,8 +45,9 @@ pub fn s3_ctr(j: &mut Jail) -> Container<GenericImage> {
     // minio preset does not work with recent image, so make our own from generic
     // let minio = MinIO::default()
 
-    let minio_ready =
-        WaitFor::http(HttpWaitStrategy::new("/").with_response_matcher(|r| r.status() == 403));
+    let minio_ready = WaitFor::http(
+        HttpWaitStrategy::new("/minio/health/live").with_expected_status_code(200_u16),
+    );
 
     let minio = GenericImage::new("quay.io/minio/minio", "latest")
         .with_exposed_port(9000.tcp())
