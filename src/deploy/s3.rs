@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, Context, Error, Ok, Result};
 use itertools::Itertools;
-use simplelog::*;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::builder::BuildResult;
 use crate::clients::bucket_client;

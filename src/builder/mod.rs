@@ -6,11 +6,11 @@ use bollard::image::BuildImageOptions;
 use futures::future::try_join_all;
 use futures::stream::{FuturesOrdered, Iter};
 use itertools::Itertools;
-use simplelog::*;
 use std::default;
 use std::fmt::Pointer;
 use std::iter::zip;
 use std::path::{Path, PathBuf};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::configparser::challenge::{
     BuildObject, ChallengeConfig, ImageSource::*, Pod, ProvideConfig,

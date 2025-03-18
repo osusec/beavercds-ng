@@ -1,23 +1,26 @@
 use beavercds_ng::commands;
 use clap::Parser;
-use simplelog::*;
+use tracing::trace;
+use tracing_subscriber::EnvFilter;
 
 mod cli;
 
 fn main() {
     let cli = cli::Cli::parse();
 
-    let log_config = ConfigBuilder::new()
-        .set_time_level(LevelFilter::Off)
-        .build();
-
-    TermLogger::init(
-        cli.verbose.log_level_filter(),
-        log_config,
-        TerminalMode::Mixed,
-        ColorChoice::Auto,
-    )
-    .unwrap();
+    // Use RUST_LOG env variable if it's set
+    // Otherwise our tracing is filtered by -q|-v* flag, all others always INFO and above
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            format!(
+                "{}={},INFO",
+                env!("CARGO_CRATE_NAME"),
+                cli.verbose.log_level_filter()
+            )
+            .into()
+        }))
+        .without_time()
+        .init();
 
     trace!("args: {:?}", cli);
 

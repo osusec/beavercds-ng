@@ -1,6 +1,6 @@
-use simplelog::*;
 use std::path::Path;
 use std::process::exit;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::configparser::{get_challenges, get_config, get_profile_deploy};
 

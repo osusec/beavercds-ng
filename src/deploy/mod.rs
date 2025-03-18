@@ -6,8 +6,8 @@ use anyhow::{anyhow, bail, Context, Error, Result};
 use itertools::Itertools;
 use k8s_openapi::api::core::v1::Secret;
 use kube::api::ListParams;
-use simplelog::*;
 use std::env::current_exe;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::kube_client;
 use crate::cluster_setup;

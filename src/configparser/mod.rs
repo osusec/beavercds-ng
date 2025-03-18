@@ -6,9 +6,9 @@ use anyhow::{anyhow, Error, Result};
 pub use challenge::ChallengeConfig; // reexport
 pub use config::UserPass; // reexport
 use itertools::Itertools;
-use simplelog::*;
 use std::path::Path;
 use std::sync::OnceLock;
+use tracing::{debug, error, info, trace, warn};
 
 // todo: replace with std::LazyLock once v1.80 is out?
 pub static CONFIG: OnceLock<config::RcdsConfig> = OnceLock::new();
