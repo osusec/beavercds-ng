@@ -4,8 +4,8 @@ use k8s_openapi::api::{
 };
 use k8s_openapi::serde_json::{from_value, json, to_string};
 use kube;
-use simplelog::*;
 use tokio;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::kube_client;
 use crate::configparser::{config, get_config, get_profile_config};

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Context, Error, Result};
 use s3;
-use simplelog::*;
 use tokio;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::{bucket_client, bucket_client_anonymous};
 use crate::configparser::{

@@ -36,6 +36,8 @@ rust-s3 = { version = "0.35.1", default-features = false, features = [
 minijinja = { version = "2.6.0", features = ["json"] }
 duct = "0.13.7"
 fastrand = "2.3.0"
+tracing = { version = "0.1.41", features = ["attributes"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 
 [dev-dependencies]

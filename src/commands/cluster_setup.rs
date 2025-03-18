@@ -1,7 +1,7 @@
 use anyhow::{Context, Error, Result};
 use itertools::Itertools;
-use simplelog::*;
 use std::process::exit;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::cluster_setup as setup;
 use crate::configparser::{get_config, get_profile_config};

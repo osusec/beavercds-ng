@@ -6,8 +6,8 @@ use bollard::{
 };
 use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
-use simplelog::*;
 use tokio;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::docker;
 use crate::configparser::{get_config, get_profile_config};

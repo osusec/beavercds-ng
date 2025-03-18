@@ -16,8 +16,8 @@ use kube::{Api, ResourceExt};
 use minijinja;
 use serde;
 use serde_yml;
-use simplelog::*;
 use tempfile;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::{apply_manifest_yaml, kube_client};
 use crate::configparser::{config, get_config, get_profile_config};

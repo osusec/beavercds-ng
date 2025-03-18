@@ -2,9 +2,9 @@ use anyhow::{Context, Result};
 use fully_pub::fully_pub;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use simplelog::*;
 use std::collections::HashMap as Map;
 use std::fs;
+use tracing::{debug, error, info, trace, warn};
 
 use figment::providers::{Env, Format, Yaml};
 use figment::Figment;
