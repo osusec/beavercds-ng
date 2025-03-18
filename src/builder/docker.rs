@@ -8,7 +8,6 @@ use bollard::image::{BuildImageOptions, PushImageOptions};
 use bollard::Docker;
 use core::fmt;
 use futures::{StreamExt, TryStreamExt};
-use simplelog::*;
 use std::fs::File;
 use std::io::{Seek, Write};
 use std::path::PathBuf;
@@ -18,6 +17,7 @@ use std::{io::Read, path::Path};
 use tar;
 use tempfile::Builder;
 use tokio;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::docker;
 use crate::configparser::challenge::BuildObject;

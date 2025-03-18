@@ -10,7 +10,7 @@ use kube::{
     discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
 };
 use s3;
-use simplelog::*;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::configparser::config;
 

@@ -6,10 +6,10 @@ use glob::glob;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use serde_nested_with::serde_nested;
-use simplelog::*;
 use std::collections::HashMap as Map;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
+use tracing::{debug, error, info, trace, warn};
 use void::Void;
 
 use crate::builder::image_tag_str;
