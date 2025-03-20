@@ -17,7 +17,7 @@ fn test_check_kube_ok() {
         let result = check_access::run("testing", true, false, false, false);
         println!("{result:?}");
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "kube access check failed");
 
         Ok(())
     });
@@ -30,7 +30,7 @@ fn test_check_kube_missing() {
         // no kube container
 
         let check = check_access::run("testing", true, false, false, false);
-        assert!(check.is_err());
+        assert!(check.is_err(), "kube access check should have failed");
 
         Ok(())
     })
@@ -43,7 +43,7 @@ fn test_check_bucket_ok() {
         let _s3 = s3_ctr(jail);
 
         let check = check_access::run("testing", false, false, false, true);
-        assert!(check.is_ok());
+        assert!(check.is_ok(), "bucket access check failed");
 
         Ok(())
     })
@@ -57,7 +57,7 @@ fn test_check_bucket_missing() {
         // no minio container
 
         let check = check_access::run("testing", false, false, false, true);
-        assert!(check.is_err());
+        assert!(check.is_err(), "bucket access check should have failed");
 
         Ok(())
     })
@@ -73,7 +73,7 @@ fn test_check_bucket_badcreds() {
         jail.set_env("BEAVERCDS_PROFILES_TESTING_S3_SECRET_KEY", "doesntexist");
 
         let check = check_access::run("testing", false, false, false, true);
-        assert!(check.is_err());
+        assert!(check.is_err(), "bucket access check should have failed");
 
         Ok(())
     });
@@ -86,7 +86,7 @@ fn test_check_registry_ok() {
         let _r = registry_ctr(jail);
 
         let check = check_access::run("testing", false, false, true, false);
-        assert!(check.is_ok());
+        assert!(check.is_ok(), "registry access check failed");
 
         Ok(())
     })
@@ -99,7 +99,7 @@ fn test_check_registry_missing() {
         // no registry container
 
         let check = check_access::run("testing", false, false, true, false);
-        assert!(check.is_err());
+        assert!(check.is_err(), "registry access check should have failed");
 
         Ok(())
     })
@@ -116,7 +116,7 @@ fn test_check_registry_badcreds() {
         jail.set_env("BEAVERCDS_REGISTRY_BUILD_PASS", "doesntexist");
 
         let check = check_access::run("testing", false, false, true, false);
-        assert!(check.is_err());
+        assert!(check.is_err(), "registry access check should have failed");
 
         Ok(())
     });
