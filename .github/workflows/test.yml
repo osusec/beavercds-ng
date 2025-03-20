@@ -1,4 +1,4 @@
-name: Run unit tests
+name: Run tests
 
 on: [push]
 
@@ -10,5 +10,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Run unit tests
-        run: cargo test
+      - uses: taiki-e/install-action@nextest
+
+      - name: Run tests
+        run: cargo nextest run
