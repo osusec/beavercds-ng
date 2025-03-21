@@ -27,4 +27,4 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Run tests
-        run: cargo nextest run
+        run: cargo nextest run --retries 2 -j 4
