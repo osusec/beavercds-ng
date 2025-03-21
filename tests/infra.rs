@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use figment::Jail;
 use testcontainers::{
     core::{wait::HttpWaitStrategy, IntoContainerPort, WaitFor},
@@ -73,6 +75,10 @@ pub fn s3_ctr(j: &mut Jail) -> Container<GenericImage> {
             .with_container_ready_conditions(vec![minio_ready]),
         )
         .unwrap();
+
+    // some sort of race condition in the bucket creation
+    // give exec above a bit of time to apply
+    thread::sleep(Duration::from_secs(1));
 
     // set envvars to point at this container
     j.set_env(
