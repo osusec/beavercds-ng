@@ -1,0 +1,12 @@
+[tools]
+"cargo:cargo-nextest" = "latest"
+
+[tasks.test]
+description = "run tests with cargo-nextest and retries"
+run = "cargo nextest run --retries 2 -j 4"
+
+[tasks.cargo_run]
+alias = ["cr"]
+description = "call 'cargo run' in the test repo directory"
+dir = "{{ config_root }}/tests/repo"
+run = "cargo run --"
