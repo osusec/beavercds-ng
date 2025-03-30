@@ -1,5 +1,7 @@
 // Builders for the various client structs for Docker/Kube etc.
 
+use std::sync::OnceLock;
+
 use anyhow::{anyhow, bail, Context, Error, Result};
 use bollard;
 use futures::TryFutureExt;
@@ -17,16 +19,27 @@ use crate::configparser::config;
 //
 // Docker stuff
 //
-pub async fn docker() -> Result<bollard::Docker> {
-    debug!("connecting to docker...");
-    let client = bollard::Docker::connect_with_defaults()?;
-    client
-        .ping()
-        .await
-        // truncate error chain with new error (returned error is way too verbose)
-        .map_err(|_| anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)"))?;
 
-    Ok(client)
+static DOCKER_CLIENT: OnceLock<bollard::Docker> = OnceLock::new();
+
+/// Return existing or create new Docker client
+pub async fn docker() -> Result<&'static bollard::Docker> {
+    match DOCKER_CLIENT.get() {
+        Some(d) => Ok(d),
+        None => {
+            debug!("connecting to docker...");
+            let client = bollard::Docker::connect_with_defaults()?;
+            client
+                .ping()
+                .await
+                // truncate error chain with new error (returned error is way too verbose)
+                .map_err(|_| {
+                    anyhow!("could not talk to Docker daemon (is DOCKER_HOST correct?)")
+                })?;
+
+            Ok(DOCKER_CLIENT.get_or_init(|| client))
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -54,27 +67,38 @@ pub async fn engine_type() -> EngineType {
 // S3 stuff
 //
 
-/// create bucket client for passed profile config
-pub fn bucket_client(config: &config::S3Config) -> Result<Box<s3::Bucket>> {
-    trace!("creating bucket client");
-    // TODO: once_cell this so it reuses the same bucket?
-    let region = s3::Region::Custom {
-        region: config.region.clone(),
-        endpoint: config.endpoint.clone(),
-    };
-    let creds = s3::creds::Credentials::new(
-        Some(&config.access_key),
-        Some(&config.secret_key),
-        None,
-        None,
-        None,
-    )?;
-    let bucket = s3::Bucket::new(&config.bucket_name, region, creds)?.with_path_style();
+// this does need to be a OnceLock instead of a LazyLock, even though how this
+// is used is more inline with a LazyLock. Lazy does not allow for passing
+// anything into the init function, and this needs a parameter to know what
+// profile to fetch creds for.
+static BUCKET_CLIENT: OnceLock<Box<s3::Bucket>> = OnceLock::new();
 
-    Ok(bucket)
+/// return existing or create new bucket client for passed profile config
+pub fn bucket_client(config: &config::S3Config) -> Result<&s3::Bucket> {
+    match BUCKET_CLIENT.get() {
+        Some(b) => Ok(b),
+        None => {
+            trace!("creating bucket client");
+            let region = s3::Region::Custom {
+                region: config.region.clone(),
+                endpoint: config.endpoint.clone(),
+            };
+            let creds = s3::creds::Credentials::new(
+                Some(&config.access_key),
+                Some(&config.secret_key),
+                None,
+                None,
+                None,
+            )?;
+            let bucket = s3::Bucket::new(&config.bucket_name, region, creds)?.with_path_style();
+
+            Ok(BUCKET_CLIENT.get_or_init(|| bucket))
+        }
+    }
 }
 
 /// create public/anonymous bucket client for passed profile config
+// this does not need a oncelock and can be created on-demand, as this is not used in very many places
 pub fn bucket_client_anonymous(config: &config::S3Config) -> Result<Box<s3::Bucket>> {
     trace!("creating anon bucket client");
     // TODO: once_cell this so it reuses the same bucket?
@@ -91,6 +115,10 @@ pub fn bucket_client_anonymous(config: &config::S3Config) -> Result<Box<s3::Buck
 //
 // Kubernetes stuff
 //
+
+// no OnceLock caching for K8S client. Some operations with the client require
+// their own owned `kube::Client`, so always returning a borrowed client from
+// the OnceLock would not work.
 
 /// Returns Kubernetes Client for selected profile
 pub async fn kube_client(profile: &config::ProfileConfig) -> Result<kube::Client> {
