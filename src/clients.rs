@@ -5,11 +5,17 @@ use std::sync::OnceLock;
 use anyhow::{anyhow, bail, Context, Error, Result};
 use bollard;
 use futures::TryFutureExt;
+use k8s_openapi::api::{
+    apps::v1::Deployment,
+    core::v1::{Pod, Service},
+    networking::v1::Ingress,
+};
 use kube::{
     self,
-    api::{DynamicObject, GroupVersionKind, TypeMeta},
+    api::{DynamicObject, GroupVersionKind, Patch, PatchParams},
     core::ResourceExt,
-    discovery::{ApiCapabilities, ApiResource, Discovery, Scope},
+    discovery::{ApiCapabilities, ApiResource},
+    runtime::{conditions, wait::await_condition},
 };
 use s3;
 use simplelog::*;
@@ -200,4 +206,142 @@ pub async fn kube_api_for(
     } else {
         Ok(kube::Api::default_namespaced_with(client, &resource))
     }
+}
+
+/// Apply multi-document manifest file, return created resources
+pub async fn apply_manifest_yaml(
+    client: &kube::Client,
+    manifest: &str,
+) -> Result<Vec<DynamicObject>> {
+    // set ourself as the owner for managed fields
+    // https://kubernetes.io/docs/reference/using-api/server-side-apply/#managers
+    let pp = PatchParams::apply("beavercds").force();
+
+    let mut results = vec![];
+
+    // this manifest has multiple documents (crds, deployment)
+    for yaml in multidoc_deserialize(manifest)? {
+        let obj: DynamicObject = serde_yml::from_value(yaml)?;
+        debug!(
+            "applying resource {} {}",
+            obj.types.clone().unwrap_or_default().kind,
+            obj.name_any()
+        );
+
+        let obj_api = kube_api_for(&obj, client.clone()).await?;
+        match obj_api
+            // patch is idempotent and will create if not present
+            .patch(&obj.name_any(), &pp, &Patch::Apply(&obj))
+            .await
+        {
+            Ok(d) => {
+                results.push(d);
+                Ok(())
+            }
+            // if error is from cluster api, mark it as such
+            Err(kube::Error::Api(ae)) => {
+                // Err(kube::Error::Api(ae).into())
+                Err(anyhow!(ae).context("error from cluster when deploying"))
+            }
+            // other errors could be anything
+            Err(e) => Err(anyhow!(e)).context("unknown error when deploying"),
+        }?;
+    }
+
+    Ok(results)
+}
+
+/// Deserialize multi-document yaml string into a Vec of the documents
+fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yml::Value>> {
+    use serde::Deserialize;
+
+    let mut docs = vec![];
+    for de in serde_yml::Deserializer::from_str(data) {
+        match serde_yml::Value::deserialize(de)? {
+            // discard any empty documents (e.g. from trailing ---)
+            serde_yml::Value::Null => (),
+            not_null => docs.push(not_null),
+        };
+    }
+    Ok(docs)
+
+    // // deserialize all chunks
+    // serde_yml::Deserializer::from_str(data)
+    //     .map(serde_yml::Value::deserialize)
+    //     // discard any empty documents (e.g. from trailing ---)
+    //     .filter_ok(|val| val != &serde_yml::Value::Null)
+    //     // coerce errors to Anyhow
+    //     .map(|r| r.map_err(|e| e.into()))
+    //     .collect()
+}
+
+/// Check the status of the passed object and wait for it to become ready.
+///
+/// This function does not provide a timeout. Callers will need to wrap this with a timeout instead.
+pub async fn wait_for_status(client: &kube::Client, object: &DynamicObject) -> Result<()> {
+    debug!(
+        "waiting for ok status for {} {}",
+        object.types.clone().unwrap_or_default().kind,
+        object.name_any()
+    );
+
+    // handle each separate object type differently
+    match object.types.clone().unwrap_or_default().kind.as_str() {
+        // wait for Pod to become running
+        "Pod" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            let x = await_condition(api, &object.name_any(), conditions::is_pod_running()).await?;
+        }
+
+        // wait for Deployment to complete rollout
+        "Deployment" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            await_condition(
+                api,
+                &object.name_any(),
+                conditions::is_deployment_completed(),
+            )
+            .await?;
+        }
+
+        // wait for Ingress to get IP from ingress controller
+        "Ingress" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            await_condition(
+                api,
+                &object.name_any(),
+                conditions::is_ingress_provisioned(),
+            )
+            .await?;
+        }
+
+        // wait for LoadBalancer service to get IP
+        "Service" => {
+            let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
+            let svc: Service = api.get(&object.name_any()).await?;
+
+            // we only care about checking LoadBalancer-type services, return Ok
+            // for any non-LB services
+            //
+            // TODO: do we care about NodePorts? don't need to check any atm
+            if svc.spec.unwrap_or_default().type_ != Some("LoadBalancer".to_string()) {
+                trace!(
+                    "not checking status for internal service {}",
+                    object.name_any()
+                );
+                return Ok(());
+            }
+
+            await_condition(
+                api,
+                &object.name_any(),
+                conditions::is_service_loadbalancer_provisioned(),
+            )
+            .await?;
+        }
+
+        other => trace!("not checking status for resource type {other}"),
+    };
+
+    Ok(())
 }

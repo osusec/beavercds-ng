@@ -79,7 +79,7 @@ pub async fn extract_asset(
 
             let name = format!(
                 "asset-container-{}-{}-{}",
-                chal.directory.to_string_lossy().replace("/", "-"),
+                chal.slugify(),
                 container_name,
                 // include random discriminator to avoid name collisions
                 repeat_with(fastrand::alphanumeric)
