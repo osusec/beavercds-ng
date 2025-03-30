@@ -35,6 +35,7 @@ rust-s3 = { version = "0.35.1", default-features = false, features = [
 ] }
 minijinja = "2.6.0"
 duct = "0.13.7"
+fastrand = "2.3.0"
 
 
 [dev-dependencies]

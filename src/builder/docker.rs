@@ -83,7 +83,6 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
     Ok(tag.to_string())
 }
 
-// #[tokio::main(flavor = "current_thread")] // make this a sync function
 pub async fn push_image(image_tag: &str, creds: &UserPass) -> Result<String> {
     info!("pushing image {image_tag:?} to registry");
     let client = docker().await?;

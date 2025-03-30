@@ -3,7 +3,6 @@
 
 use anyhow::{anyhow, Context, Error, Result};
 use bollard::image::BuildImageOptions;
-use futures::future::try_join_all;
 use futures::stream::{FuturesOrdered, Iter};
 use itertools::Itertools;
 use simplelog::*;
@@ -16,6 +15,7 @@ use crate::configparser::challenge::{
     BuildObject, ChallengeConfig, ImageSource::*, Pod, ProvideConfig,
 };
 use crate::configparser::{enabled_challenges, get_config};
+use crate::utils::TryJoinAll;
 
 pub mod artifacts;
 pub mod docker;
@@ -40,7 +40,7 @@ pub struct BuildResult {
 }
 
 /// Tag string with added context of where it came from (built locally or an upstream image)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TagWithSource {
     Upstream(String),
     Built(String),
@@ -52,16 +52,15 @@ pub async fn build_challenges(
     push: bool,
     extract_artifacts: bool,
 ) -> Result<Vec<(&ChallengeConfig, BuildResult)>> {
-    try_join_all(
-        enabled_challenges(profile_name)?
-            .into_iter()
-            .map(|chal| async move {
-                build_challenge(profile_name, chal, push, extract_artifacts)
-                    .await
-                    .map(|r| (chal, r))
-            }),
-    )
-    .await
+    enabled_challenges(profile_name)?
+        .into_iter()
+        .map(|chal| async move {
+            build_challenge(profile_name, chal, push, extract_artifacts)
+                .await
+                .map(|r| (chal, r))
+        })
+        .try_join_all()
+        .await
 }
 
 /// Build all images from given challenge, optionally pushing image or extracting artifacts
@@ -79,28 +78,32 @@ async fn build_challenge(
         assets: vec![],
     };
 
-    built.tags = try_join_all(chal.pods.iter().map(|p| async {
-        match &p.image_source {
-            Image(tag) => Ok(TagWithSource::Upstream(tag.to_string())),
-            // build any pods that need building
-            Build(build) => {
-                let tag = chal.container_tag_for_pod(profile_name, &p.name)?;
+    built.tags = chal
+        .pods
+        .iter()
+        .map(|p| async {
+            match &p.image_source {
+                Image(tag) => Ok(TagWithSource::Upstream(tag.to_string())),
+                // build any pods that need building
+                Build(build) => {
+                    let tag = chal.container_tag_for_pod(profile_name, &p.name)?;
 
-                let res = docker::build_image(&chal.directory, build, &tag)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "error building image {} for chal {}",
-                            p.name,
-                            chal.directory.to_string_lossy()
-                        )
-                    });
-                // map result tag string into enum
-                res.map(TagWithSource::Built)
+                    let res = docker::build_image(&chal.directory, build, &tag)
+                        .await
+                        .with_context(|| {
+                            format!(
+                                "error building image {} for chal {}",
+                                p.name,
+                                chal.directory.to_string_lossy()
+                            )
+                        });
+                    // map result tag string into enum
+                    res.map(TagWithSource::Built)
+                }
             }
-        }
-    }))
-    .await?;
+        })
+        .try_join_all()
+        .await?;
 
     if push {
         // only need to push tags we actually built
@@ -119,12 +122,15 @@ async fn build_challenge(
             chal.directory
         );
 
-        try_join_all(tags_to_push.iter().map(|tag| async move {
-            docker::push_image(tag, &config.registry.build)
-                .await
-                .with_context(|| format!("error pushing image {tag}"))
-        }))
-        .await?;
+        tags_to_push
+            .iter()
+            .map(|tag| async move {
+                docker::push_image(tag, &config.registry.build)
+                    .await
+                    .with_context(|| format!("error pushing image {tag}"))
+            })
+            .try_join_all()
+            .await?;
     }
 
     if extract_artifacts {
@@ -132,19 +138,25 @@ async fn build_challenge(
 
         // extract each challenge provide entry
         // this handles both local files and from build containers
-        let extracted_files = chal
+        built.assets = chal
             .provide
             .iter()
-            .map(|p| {
-                artifacts::extract_asset(chal, p, profile_name).with_context(|| {
-                    format!(
-                        "failed to extract build artifacts for chal {:?}",
-                        chal.directory,
-                    )
-                })
+            .map(|p| async {
+                artifacts::extract_asset(chal, p, profile_name)
+                    .await
+                    .with_context(|| {
+                        format!(
+                            "failed to extract build artifacts for chal {:?}",
+                            chal.directory,
+                        )
+                    })
             })
-            .flatten_ok()
-            .collect::<Result<Vec<_>>>()?;
+            .try_join_all()
+            .await?
+            // flatten to single vec of all paths
+            .into_iter()
+            .flatten()
+            .collect_vec();
 
         info!("extracted artifacts: {:?}", built.assets);
     }
