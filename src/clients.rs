@@ -268,43 +268,22 @@ pub async fn wait_for_status(client: &kube::Client, object: &DynamicObject) -> R
         // wait for Deployment to complete rollout
         "Deployment" => {
             let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
-            await_condition(api, &object.name_any(), |d: Option<&Deployment>| {
-                // Use a nested function so that we can use Option? returns (the outer closure returns `bool`)
-                // TODO: switch to try { } when that is standardized
-                /// Replicate the upstream deployment complete check
-                /// https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#complete-deployment
-                fn depl_complete(d: Option<&Deployment>) -> Option<bool> {
-                    Some(d?.status.as_ref()?.conditions.as_ref()?.iter().any(|c| {
-                        c.reason == Some("NewReplicaSetAvailable".to_string()) && c.status == "True"
-                    }))
-                }
-                depl_complete(d).unwrap_or(false)
-            })
+            await_condition(
+                api,
+                &object.name_any(),
+                conditions::is_deployment_completed(),
+            )
             .await?;
         }
 
         // wait for Ingress to get IP from ingress controller
         "Ingress" => {
             let api = kube::Api::namespaced(client.clone(), &object.namespace().unwrap());
-            await_condition(api, &object.name_any(), |i: Option<&Ingress>| {
-                // Use nested function for Option ?, like above.
-                /// Wait for ingress controller to update this with its external ip
-                fn ingress_ip(i: Option<&Ingress>) -> Option<bool> {
-                    Some(
-                        // bleh, this as_ref stuff is unavoidable
-                        i?.status
-                            .as_ref()?
-                            .load_balancer
-                            .as_ref()?
-                            .ingress
-                            .as_ref()?
-                            .iter()
-                            // TODO: should this be any()? all controllers I've seen only add .ip here
-                            .all(|ip| ip.hostname.is_some() || ip.ip.is_some()),
-                    )
-                }
-                ingress_ip(i).unwrap_or(false)
-            })
+            await_condition(
+                api,
+                &object.name_any(),
+                conditions::is_ingress_provisioned(),
+            )
             .await?;
         }
 
@@ -325,23 +304,11 @@ pub async fn wait_for_status(client: &kube::Client, object: &DynamicObject) -> R
                 return Ok(());
             }
 
-            await_condition(api, &object.name_any(), |s: Option<&Service>| {
-                /// Wait for LoadBalancer to get external IP
-                fn lb_ip(s: Option<&Service>) -> Option<bool> {
-                    Some(
-                        // bleh, this as_ref stuff is unavoidable
-                        s?.status
-                            .as_ref()?
-                            .load_balancer
-                            .as_ref()?
-                            .ingress
-                            .as_ref()?
-                            .iter()
-                            .all(|ip| ip.hostname.is_some() || ip.ip.is_some()),
-                    )
-                }
-                lb_ip(s).unwrap_or(false)
-            })
+            await_condition(
+                api,
+                &object.name_any(),
+                conditions::is_service_loadbalancer_provisioned(),
+            )
             .await?;
         }
 
