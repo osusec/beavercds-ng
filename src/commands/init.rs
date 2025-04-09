@@ -23,7 +23,6 @@ pub fn run(_interactive: &bool, _blank: &bool) {
         options = init::example_init();
     }
 
-    // TODO write to disk
     let configuration = templatize_init(options);
     let mut f = match File::create("rcds.yaml") {
         Ok(t) => t,
@@ -39,4 +38,8 @@ pub fn run(_interactive: &bool, _blank: &bool) {
             exit(1);
         }
     }
+
+    // Note about external-dns
+    println!("Note: external-dns configuration settings will need to be provided in rcds.yaml after file creation, under the `profiles.name.dns` key.");
+    println!("Reference: https://github.com/bitnami/charts/tree/main/bitnami/external-dns");
 }

@@ -50,10 +50,6 @@ pub struct profile {
     pub s3_region: String,
     pub s3_accesskey: String,
     pub s3_secretaccesskey: String,
-    // TODO external dns garbage
-    pub dns_provider: String,
-    // dns_provider_values: HashMap<String, String>
-    // dns_txtOwnerId: Option<
 }
 
 pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
@@ -256,13 +252,6 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                             .with_help_message("The secret acess key to the S3 bucket.")
                             .prompt()?
                     },
-                    dns_provider: {
-                        // TODO : literally all of the external DNS settings
-                        inquire::Text::new("DNS provider:")
-                            .with_help_message("The name of the cloud DNS provider being used.")
-                            .with_placeholder("route53")
-                            .prompt()?
-                    },
                 };
                 profiles.push(prof);
 
@@ -303,7 +292,6 @@ pub fn blank_init() -> init_vars {
             s3_region: String::new(),
             s3_accesskey: String::new(),
             s3_secretaccesskey: String::new(),
-            dns_provider: String::from("aws"),
         }],
     };
 }
@@ -333,16 +321,15 @@ pub fn example_init() -> init_vars {
         ],
         profiles: vec![profile {
             profile_name: String::from("default"),
-            frontend_url: String::from("https://ctf.coolguy.xyz"),
+            frontend_url: String::from("https://ctf.coolguy.invalid"),
             frontend_token: String::from("secretsecretsecret"),
-            challenges_domain: String::from("chals.coolguy.xyz"),
+            challenges_domain: String::from("chals.coolguy.invalid"),
             kubecontext: String::from("ctf-cluster"),
             s3_bucket_name: String::from("ctf-bucket"),
-            s3_endpoint: String::from("s3.coolguy.xyz"),
+            s3_endpoint: String::from("s3.coolguy.invalid"),
             s3_region: String::from("us-west-2"),
             s3_accesskey: String::from("accesskey"),
             s3_secretaccesskey: String::from("secretkey"),
-            dns_provider: String::from("aws"),
         }],
     };
 }

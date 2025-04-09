@@ -40,7 +40,7 @@ profiles:
       access_key: {{ prof.s3_accesskey }}
       secret_key: {{ prof.s3_secretaccesskey }}
     dns:
-      provider: {{ prof.dns_provider }}
-      {{ prof.dns_provider }}:
-        # TODO: provider-specific external-dns
+      # Place external-dns configuration options here;
+      #  this yaml will be passed directly to external-dns without modification
+      # Reference: https://github.com/bitnami/charts/tree/main/bitnami/external-dns
 {% endfor %}
