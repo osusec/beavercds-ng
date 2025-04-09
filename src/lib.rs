@@ -9,8 +9,8 @@ pub mod cluster_setup;
 pub mod commands;
 pub mod configparser;
 pub mod deploy;
-pub mod utils;
 pub mod init;
+pub mod utils;
 
 #[cfg(test)]
 mod tests;

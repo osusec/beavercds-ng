@@ -94,6 +94,6 @@ pub enum Commands {
         interactive: bool,
         /// Cannot be used with -i. If enabled, will create the file without any fields set. If disabled, will create an example config file (fields set with fake data).
         #[arg(short = 'b', long, conflicts_with = "interactive")]
-        blank: bool
+        blank: bool,
     },
 }

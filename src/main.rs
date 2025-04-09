@@ -60,9 +60,6 @@ fn main() {
             commands::cluster_setup::run(profile);
         }
 
-        cli::Commands::Init {
-            interactive,
-            blank
-        } => commands::init::run (interactive, blank)
+        cli::Commands::Init { interactive, blank } => commands::init::run(interactive, blank),
     }
 }

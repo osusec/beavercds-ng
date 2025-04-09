@@ -1,39 +1,40 @@
-
 use inquire;
 use minijinja;
+use regex::Regex;
 use serde;
 use std::fmt;
-use regex::Regex;
 
 pub mod templates;
 
 #[derive(serde::Serialize)]
-pub struct init_vars
-{
+pub struct init_vars {
     pub flag_regex: String,
     pub registry_domain: String,
     pub registry_build_user: String,
     pub registry_build_pass: String,
     pub registry_cluster_user: String,
     pub registry_cluster_pass: String,
-    pub defaults_difficulty: String, //u64,
-    pub defaults_resources_cpu: String, //u64,
+    pub defaults_difficulty: String,       //u64,
+    pub defaults_resources_cpu: String,    //u64,
     pub defaults_resources_memory: String, //(u64, Option(String)),
     pub points: Vec<points>,
-    pub profiles: Vec<profile>
+    pub profiles: Vec<profile>,
 }
 
-#[derive(Clone)]
-#[derive(serde::Serialize)]
+#[derive(Clone, serde::Serialize)]
 pub struct points {
     pub difficulty: String, //u64,
-    pub min: String, //u64,
-    pub max: String, //u64
+    pub min: String,        //u64,
+    pub max: String,        //u64
 }
 
 impl fmt::Display for points {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({}  Points: {}-{})", self.difficulty, self.min, self.max)
+        write!(
+            f,
+            "({}  Points: {}-{})",
+            self.difficulty, self.min, self.max
+        )
     }
 }
 
@@ -55,16 +56,13 @@ pub struct profile {
     // dns_txtOwnerId: Option<
 }
 
-
-pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
-{
+pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
     println!("For all prompts below, simply press Enter to leave blank.");
     println!("All fields that can be set in rcds.yaml can also be set via environment variables.");
 
     let points_ranks_reference: Vec<points>;
 
-    let options = init_vars { 
-
+    let options = init_vars {
         flag_regex: {
             //TODO:
             // - also provide regex examples in help
@@ -114,11 +112,10 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
         points: {
             println!("You can define several challenge difficulty classes below.");
             let mut again = inquire::Confirm::new("Do you want to provide a difficulty class?")
-                                .with_default(false)
-                                .prompt()?;
+                .with_default(false)
+                .prompt()?;
             let mut points_ranks: Vec<points> = Vec::new();
-            while again
-            {
+            while again {
                 let points_obj = points {
                     // TODO: theres no reason these need to be numbers instead of open strings, e.g. for "easy"
                     difficulty: {
@@ -145,13 +142,13 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
                         .with_help_message("Challenge points are dynamic: the maximum number of points that challenges within this difficulty class are worth.")
                         .prompt()?
                         .to_string()
-                    }
+                    },
                 };
                 points_ranks.push(points_obj);
 
                 again = inquire::Confirm::new("Do you want to provide another difficulty class?")
-                        .with_default(false)
-                        .prompt()?;
+                    .with_default(false)
+                    .prompt()?;
             }
             points_ranks_reference = points_ranks.clone();
             points_ranks
@@ -161,9 +158,11 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
         defaults_difficulty: {
             if points_ranks_reference.is_empty() {
                 String::new()
-            }
-            else {
-                inquire::Select::new("Please choose the default difficulty class:", points_ranks_reference)
+            } else {
+                inquire::Select::new(
+                    "Please choose the default difficulty class:",
+                    points_ranks_reference,
+                )
                 .prompt()?
                 .difficulty
             }
@@ -177,8 +176,7 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
 
             if resources.is_empty() {
                 String::from("1")
-            }
-            else {
+            } else {
                 resources
             }
         },
@@ -191,20 +189,19 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
 
             if resources.is_empty() {
                 String::from("500M")
-            }
-            else {
+            } else {
                 resources
             }
         },
 
         profiles: {
             println!("You can define several environment profiles below.");
-            
+
             let mut again = inquire::Confirm::new("Do you want to provide a profile?")
-                                .with_default(false)
-                                .prompt()?;
+                .with_default(false)
+                .prompt()?;
             let mut profiles: Vec<profile> = Vec::new();
-            while again  {
+            while again {
                 let prof = profile {
                     profile_name: {
                         inquire::Text::new("Profile name:")
@@ -214,18 +211,20 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
                     },
                     frontend_url: {
                         inquire::Text::new("Frontend URL:")
-                        .with_help_message("The URL of the RNG scoreboard.") // TODO: can definitely say more about why this is significant
-                        .prompt()?
+                            .with_help_message("The URL of the RNG scoreboard.") // TODO: can definitely say more about why this is significant
+                            .prompt()?
                     },
                     frontend_token: {
                         inquire::Text::new("Frontend token:")
-                        .with_help_message("The token for RNG to authenticate itself into the scoreboard.") // TODO: again, say more
-                        .prompt()?
+                            .with_help_message(
+                                "The token for RNG to authenticate itself into the scoreboard.",
+                            ) // TODO: again, say more
+                            .prompt()?
                     },
                     challenges_domain: {
                         inquire::Text::new("Challenges domain:")
-                        .with_help_message("Domain that challenges are hosted under.")
-                        .prompt()?
+                            .with_help_message("Domain that challenges are hosted under.")
+                            .prompt()?
                     },
                     kubecontext: {
                         inquire::Text::new("Kube context:")
@@ -239,46 +238,45 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars>
                     },
                     s3_endpoint: {
                         inquire::Text::new("S3 endpoint:")
-                        .with_help_message("The endpoint of the S3 bucket server.")
-                        .prompt()?
+                            .with_help_message("The endpoint of the S3 bucket server.")
+                            .prompt()?
                     },
                     s3_region: {
                         inquire::Text::new("S3 region:")
-                        .with_help_message("The region that the S3 bucket is hosted.")
-                        .prompt()?
+                            .with_help_message("The region that the S3 bucket is hosted.")
+                            .prompt()?
                     },
                     s3_accesskey: {
                         inquire::Text::new("S3 access key:")
-                        .with_help_message("The public access key to the S3 bucket.")
-                        .prompt()?
+                            .with_help_message("The public access key to the S3 bucket.")
+                            .prompt()?
                     },
                     s3_secretaccesskey: {
                         inquire::Text::new("S3 secret key:")
-                        .with_help_message("The secret acess key to the S3 bucket.")
-                        .prompt()?
+                            .with_help_message("The secret acess key to the S3 bucket.")
+                            .prompt()?
                     },
                     dns_provider: {
                         // TODO : literally all of the external DNS settings
                         inquire::Text::new("DNS provider:")
-                        .with_help_message("The name of the cloud DNS provider being used.")
-                        .with_placeholder("route53")
-                        .prompt()?
-                    }
+                            .with_help_message("The name of the cloud DNS provider being used.")
+                            .with_placeholder("route53")
+                            .prompt()?
+                    },
                 };
                 profiles.push(prof);
 
                 again = inquire::Confirm::new("Do you want to provide another profile?")
-                        .with_default(false)
-                        .prompt()?;
+                    .with_default(false)
+                    .prompt()?;
             }
             profiles
-        } 
+        },
     };
     return Ok(options);
 }
 
-pub fn blank_init() -> init_vars
-{
+pub fn blank_init() -> init_vars {
     return init_vars {
         flag_regex: String::new(),
         registry_domain: String::new(),
@@ -289,33 +287,28 @@ pub fn blank_init() -> init_vars
         defaults_difficulty: String::new(),
         defaults_resources_cpu: String::new(),
         defaults_resources_memory: String::new(),
-        points: vec![
-            points {
-                difficulty: String::new(),
-                min: String::new(),
-                max: String::new()
-            }
-        ],
-        profiles: vec![
-            profile {
-                profile_name: String::from("default"),
-                frontend_url: String::new(),
-                frontend_token: String::new(),
-                challenges_domain: String::new(),
-                kubecontext: String::new(),
-                s3_bucket_name: String::new(),
-                s3_endpoint: String::new(),
-                s3_region: String::new(),
-                s3_accesskey: String::new(),
-                s3_secretaccesskey: String::new(),
-                dns_provider: String::from("aws")
-            }
-        ]
+        points: vec![points {
+            difficulty: String::new(),
+            min: String::new(),
+            max: String::new(),
+        }],
+        profiles: vec![profile {
+            profile_name: String::from("default"),
+            frontend_url: String::new(),
+            frontend_token: String::new(),
+            challenges_domain: String::new(),
+            kubecontext: String::new(),
+            s3_bucket_name: String::new(),
+            s3_endpoint: String::new(),
+            s3_region: String::new(),
+            s3_accesskey: String::new(),
+            s3_secretaccesskey: String::new(),
+            dns_provider: String::from("aws"),
+        }],
     };
 }
 
-pub fn example_init() -> init_vars
-{
+pub fn example_init() -> init_vars {
     return init_vars {
         flag_regex: String::from("ctf{.*}"), // TODO: do that wildcard in the most common regex flavor since Rust regex supports multiple styles
         registry_domain: String::from("ghcr.io/youraccount"),
@@ -330,29 +323,27 @@ pub fn example_init() -> init_vars
             points {
                 difficulty: String::from("1"),
                 min: String::from("1"),
-                max: String::from("1337") 
+                max: String::from("1337"),
             },
             points {
                 difficulty: String::from("2"),
                 min: String::from("200"),
-                max: String::from("500")
-            }
+                max: String::from("500"),
+            },
         ],
-        profiles: vec![
-            profile {
-                profile_name: String::from("default"),
-                frontend_url: String::from("https://ctf.coolguy.xyz"),
-                frontend_token: String::from("secretsecretsecret"),
-                challenges_domain: String::from("chals.coolguy.xyz"),
-                kubecontext: String::from("ctf-cluster"),
-                s3_bucket_name: String::from("ctf-bucket"),
-                s3_endpoint: String::from("s3.coolguy.xyz"),
-                s3_region: String::from("us-west-2"),
-                s3_accesskey: String::from("accesskey"),
-                s3_secretaccesskey: String::from("secretkey"),
-                dns_provider: String::from("aws")
-            }
-        ]
+        profiles: vec![profile {
+            profile_name: String::from("default"),
+            frontend_url: String::from("https://ctf.coolguy.xyz"),
+            frontend_token: String::from("secretsecretsecret"),
+            challenges_domain: String::from("chals.coolguy.xyz"),
+            kubecontext: String::from("ctf-cluster"),
+            s3_bucket_name: String::from("ctf-bucket"),
+            s3_endpoint: String::from("s3.coolguy.xyz"),
+            s3_region: String::from("us-west-2"),
+            s3_accesskey: String::from("accesskey"),
+            s3_secretaccesskey: String::from("secretkey"),
+            dns_provider: String::from("aws"),
+        }],
     };
 }
 
