@@ -86,4 +86,14 @@ pub enum Commands {
         #[arg(short, long, value_name = "PROFILE")]
         profile: String,
     },
+
+    /// Create an initial rcds.yaml to the current working directory.
+    Init {
+        /// Cannot be used with -b. If enabled, will prompt for each field of the config file. If disabled, behavior depends on --blank.
+        #[arg(short = 'i', long)]
+        interactive: bool,
+        /// Cannot be used with -i. If enabled, will create the file without any fields set. If disabled, will create an example config file (fields set with fake data).
+        #[arg(short = 'b', long, conflicts_with = "interactive")]
+        blank: bool
+    },
 }

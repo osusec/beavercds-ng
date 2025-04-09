@@ -1,0 +1,46 @@
+flag_regex: {{ options.flag_regex }}
+
+registry:
+  domain: {{ options.registry_domain }}
+  build:
+    user: {{ options.registry_build_user }}
+    pass: {{ options.registry_build_pass }}
+  cluster:
+    user: {{ options.registry_cluster_user }}
+    pass: {{ options.registry_cluster_pass }}
+
+defaults:
+  difficulty: {{ options.defaults_difficulty }}
+  resources: { cpu: {{ options.defaults_resources_cpu }}, memory: {{ options.defaults_resources_memory }} }
+
+points: {% for pts in options.points %}
+  - difficulty: {{ pts.difficulty }}
+    min: {{ pts.min }}
+    max: {{ pts.max }}
+{% endfor %}
+# TODO
+deploy:
+  # control challenge deployment status explicitly per environment/profile
+  testing:
+    misc/garf: true
+    pwn/notsh: true
+    web/bar: true
+
+profiles:
+{% for prof in options.profiles %}
+  {{ prof.profile_name}}:
+    frontend_url: {{ prof.frontend_url }}
+    frontend_token: {{ prof.frontend_token }}
+    challenges_domain: {{ prof.challenges_domain }}
+    kubecontext: {{ prof.kubecontext }}
+    s3:
+      bucket_name: {{ prof.s3_bucket_name }}
+      endpoint: {{ prof.s3_endpoint }}
+      region: {{ prof.s3_region }}
+      access_key: {{ prof.s3_accesskey }}
+      secret_key: {{ prof.s3_secretaccesskey }}
+    dns:
+      provider: {{ prof.dns_provider }}
+      {{ prof.dns_provider }}:
+        # TODO: provider-specific external-dns
+{% endfor %}

@@ -59,5 +59,10 @@ fn main() {
         cli::Commands::ClusterSetup { profile } => {
             commands::cluster_setup::run(profile);
         }
+
+        cli::Commands::Init {
+            interactive,
+            blank
+        } => commands::init::run (interactive, blank)
     }
 }

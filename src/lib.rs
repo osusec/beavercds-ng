@@ -10,6 +10,7 @@ pub mod commands;
 pub mod configparser;
 pub mod deploy;
 pub mod utils;
+pub mod init;
 
 #[cfg(test)]
 mod tests;
