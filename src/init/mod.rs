@@ -5,6 +5,7 @@ use serde;
 use std::fmt;
 
 pub mod templates;
+pub mod example_values;
 
 #[derive(serde::Serialize)]
 pub struct init_vars {
@@ -14,18 +15,18 @@ pub struct init_vars {
     pub registry_build_pass: String,
     pub registry_cluster_user: String,
     pub registry_cluster_pass: String,
-    pub defaults_difficulty: String,       //u64,
-    pub defaults_resources_cpu: String,    //u64,
-    pub defaults_resources_memory: String, //(u64, Option(String)),
+    pub defaults_difficulty: String,
+    pub defaults_resources_cpu: String,
+    pub defaults_resources_memory: String,
     pub points: Vec<points>,
     pub profiles: Vec<profile>,
 }
 
 #[derive(Clone, serde::Serialize)]
 pub struct points {
-    pub difficulty: String, //u64,
-    pub min: String,        //u64,
-    pub max: String,        //u64
+    pub difficulty: String,
+    pub min: String,
+    pub max: String,
 }
 
 impl fmt::Display for points {
@@ -63,43 +64,47 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
             //TODO:
             // - also provide regex examples in help
             // - is this even a good idea to have the user provide the regex
-            // - with placeholder?
+            // - what kind of regex is being validated and accepted
             inquire::Text::new("Flag regex:")
             .with_help_message("This regex will be used to validate the individual flags of your challenges later.")
+            .with_placeholder(example_values::FLAG_REGEX)
             .prompt()?
         },
 
         registry_domain: {
             inquire::Text::new ("Container registry:")
-            .with_help_message("This is the domain of your remote container registry, which includes both the endpoint details and your repository name.") //where you will push images to and where your cluster will pull challenge images from.") // TODO
+            .with_help_message("Hosted challenges will be hosted in a container registry.The connection endpoint and the repository name.") 
+            .with_placeholder(example_values::REGISTRY_DOMAIN)
             .prompt()?
         },
 
         registry_build_user: {
-            inquire::Text::new ("Container registry user (YOURS):")
-            .with_help_message("Your username to the remote container registry, which you will use to push containers to.")
+            inquire::Text::new ("Container registry 'build' user:")
+            .with_help_message("The username that will be used to push built containers.")
+            .with_placeholder(example_values::REGISTRY_BUILD_USER)
             .prompt()?
         },
 
         // TODO: do we actually want to be in charge of these credentials vs letting the container building utility take care of it?
         registry_build_pass: {
-            inquire::Password::new("Container registry password (YOURS):")
-            .with_help_message("Your password to the remote container registry, which you will use to push containers to.") // TODO: could this support username:pat too?
+            inquire::Password::new("Container registry 'build' password:")
+            .with_help_message("The password to the 'build' user account") // TODO: could this support username:pat too?
             .with_display_mode(inquire::PasswordDisplayMode::Masked)
             .with_custom_confirmation_message("Enter again:")
             .prompt()?
         },
 
         registry_cluster_user: {
-            inquire::Text::new ("Container registry user (CLUSTER'S):")
-            .with_help_message("The cluster's username to the remote container registry, which it will use to pull containers from.")
+            inquire::Text::new ("Container registry 'cluster' user:")
+            .with_help_message("The username that the cluster will use to pull locally-built containers.")
+            .with_placeholder(example_values::REGISTRY_CLUSTER_USER)
             .prompt()?
         },
 
         // TODO: would the cluster not use a token of some sort?
         registry_cluster_pass: {
-            inquire::Password::new("Container registry password (CLUSTER'S):")
-            .with_help_message("The cluster's password to the remote container registry, which it will use to pull containers from.")
+            inquire::Password::new("Container registry 'cluster' password:")
+            .with_help_message("The password to the 'cluster' user account")
             .with_display_mode(inquire::PasswordDisplayMode::Masked)
             .with_custom_confirmation_message("Enter again:")
             .prompt()?
@@ -119,23 +124,26 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                         // default parser calls std::u64::from_str
                         .with_error_message("Please type a valid number.")
                         .with_help_message("The rank of the difficulty class as an unsigned integer, with lower numbers being \"easier.\"")
+                        .with_placeholder(example_values::POINTS_DIFFICULTY)
                         .prompt()?
                         .to_string()
                     },
                     // TODO: support static-point challenges
                     min: {
-                        inquire::CustomType::<u64>::new("Minimum number of points:")
+                        inquire::CustomType::<u64>::new("Minimum points:")
                         // default parser calls std::u64::from_str
                         .with_error_message("Please type a valid number.")
-                        .with_help_message("Challenge points are dynamic: the minimum number of points that challenges within this difficulty class are worth.")
+                        .with_help_message("Challenge points are dynamic. The minimum number of points that challenges within this difficulty class are worth.")
+                        .with_placeholder(example_values::POINTS_MIN)
                         .prompt()?
                         .to_string()
                     },
                     max: {
-                        inquire::CustomType::<u64>::new("Maximum number of points:")
+                        inquire::CustomType::<u64>::new("Maximum points:")
                         // default parser calls std::u64::from_str
                         .with_error_message("Please type a valid number.")
-                        .with_help_message("Challenge points are dynamic: the maximum number of points that challenges within this difficulty class are worth.")
+                        .with_help_message("The maximum number of points that challenges within this difficulty class are worth.")
+                        .with_placeholder(example_values::POINTS_MAX)
                         .prompt()?
                         .to_string()
                     },
@@ -150,7 +158,6 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
             points_ranks
         },
 
-        // TODO: how much format validation should these two do now vs offloading to validate() later? current inquire replacement calls are temporary and do the zero checking, just grabbing a String
         defaults_difficulty: {
             if points_ranks_reference.is_empty() {
                 String::new()
@@ -165,26 +172,26 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
         },
 
         defaults_resources_cpu: {
-            let resources = inquire::Text::new("Default limit of CPUs per challenge:")
-            .with_help_message("The maximum limit of CPU resources per instance of challenge deployment (\"pod\").")
-            .with_placeholder("1")
+            let resources = inquire::Text::new("Default CPU limit:")
+            .with_help_message("The default limit of CPU resources per challenge pod.\nhttps://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes")
+            .with_placeholder(example_values::DEFAULTS_RESOURCES_CPU)
             .prompt()?;
 
             if resources.is_empty() {
-                String::from("1")
+                String::from(example_values::DEFAULTS_RESOURCES_CPU)
             } else {
                 resources
             }
         },
 
         defaults_resources_memory: {
-            let resources = inquire::Text::new("Default limit of memory per challenge:")
-            .with_help_message("The maximum limit of memory resources per instance of challenge deployment (\"pod\").")
-            .with_placeholder("500M")
+            let resources = inquire::Text::new("Default memory limit:")
+            .with_help_message("The default limit of CPU resources per challenge pod.\nhttps://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes")
+            .with_placeholder(example_values::DEFAULTS_RESOURCES_MEMORY)
             .prompt()?;
 
             if resources.is_empty() {
-                String::from("500M")
+                String::from(example_values::DEFAULTS_RESOURCES_MEMORY)
             } else {
                 resources
             }
@@ -202,54 +209,63 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                     profile_name: {
                         inquire::Text::new("Profile name:")
                         .with_help_message("The name of the deployment profile. One profile named \"default\" is recommended. You can add additional profiles.")
-                        .with_placeholder("default")
+                        .with_placeholder(example_values::PROFILES_PROFILE_NAME)
                         .prompt()?
                     },
                     frontend_url: {
                         inquire::Text::new("Frontend URL:")
-                            .with_help_message("The URL of the RNG scoreboard.") // TODO: can definitely say more about why this is significant
+                            .with_help_message("The URL of the RNG scoreboard.")
+                            .with_placeholder(example_values::PROFILES_FRONTEND_URL)
                             .prompt()?
                     },
                     frontend_token: {
                         inquire::Text::new("Frontend token:")
                             .with_help_message(
-                                "The token for RNG to authenticate itself into the scoreboard.",
-                            ) // TODO: again, say more
+                                "The token to authenticate into the RNG scoreboard.",
+                            )
+                            .with_placeholder(example_values::PROFILES_FRONTEND_TOKEN)
                             .prompt()?
                     },
                     challenges_domain: {
                         inquire::Text::new("Challenges domain:")
                             .with_help_message("Domain that challenges are hosted under.")
+                            .with_placeholder(example_values::PROFILES_CHALLENGES_DOMAIN)
                             .prompt()?
                     },
                     kubecontext: {
-                        inquire::Text::new("Kube context:")
-                        .with_help_message("The name of the context that kubectl looks for to interface with the cluster.")
+                        inquire::Text::new("Kubecontext name:")
+                        .with_help_message("The name of the context that kubectl uses to connect to the cluster.")
+                        .with_placeholder(example_values::PROFILES_KUBECONTEXT)
                         .prompt()?
                     },
                     s3_bucket_name: {
                         inquire::Text::new("S3 bucket name:")
-                        .with_help_message("Challenge artifacts and static files will be hosted on and served from S3. The name of the S3 bucket.")
+                        .with_help_message("Challenge artifacts and static files will be hosted on S3. The name of the S3 bucket.")
+                        .with_placeholder(example_values::PROFILES_S3_BUCKET_NAME)
                         .prompt()?
                     },
                     s3_endpoint: {
                         inquire::Text::new("S3 endpoint:")
                             .with_help_message("The endpoint of the S3 bucket server.")
+                            .with_placeholder(example_values::PROFILES_S3_ENDPOINT)
                             .prompt()?
                     },
                     s3_region: {
                         inquire::Text::new("S3 region:")
-                            .with_help_message("The region that the S3 bucket is hosted.")
+                            .with_help_message("The region where the S3 bucket is hosted.")
+                            .with_placeholder(example_values::PROFILES_S3_REGION)
                             .prompt()?
                     },
                     s3_accesskey: {
                         inquire::Text::new("S3 access key:")
                             .with_help_message("The public access key to the S3 bucket.")
+                            .with_placeholder(example_values::PROFILES_S3_ACCESSKEY)
                             .prompt()?
                     },
                     s3_secretaccesskey: {
                         inquire::Text::new("S3 secret key:")
                             .with_help_message("The secret acess key to the S3 bucket.")
+                            .with_placeholder(example_values::PROFILES_S3_SECRETACCESSKEY)
                             .prompt()?
                     },
                 };
@@ -282,7 +298,7 @@ pub fn blank_init() -> init_vars {
             max: String::new(),
         }],
         profiles: vec![profile {
-            profile_name: String::from("default"),
+            profile_name: String::from(example_values::PROFILES_PROFILE_NAME),
             frontend_url: String::new(),
             frontend_token: String::new(),
             challenges_domain: String::new(),
@@ -298,38 +314,38 @@ pub fn blank_init() -> init_vars {
 
 pub fn example_init() -> init_vars {
     return init_vars {
-        flag_regex: String::from("ctf{.*}"), // TODO: do that wildcard in the most common regex flavor since Rust regex supports multiple styles
-        registry_domain: String::from("ghcr.io/youraccount"),
-        registry_build_user: String::from("admin"),
-        registry_build_pass: String::from("notrealcreds"),
-        registry_cluster_user: String::from("cluster_user"),
-        registry_cluster_pass: String::from("alsofake"),
-        defaults_difficulty: String::from("1"),
-        defaults_resources_cpu: String::from("1"),
-        defaults_resources_memory: String::from("500M"),
+        flag_regex: String::from(example_values::FLAG_REGEX), // TODO: do that wildcard in the most common regex flavor since Rust regex supports multiple styles
+        registry_domain: String::from(example_values::REGISTRY_DOMAIN),
+        registry_build_user: String::from(example_values::REGISTRY_BUILD_USER),
+        registry_build_pass: String::from(example_values::REGISTRY_BUILD_PASS),
+        registry_cluster_user: String::from(example_values::REGISTRY_CLUSTER_USER),
+        registry_cluster_pass: String::from(example_values::REGISTRY_CLUSTER_USER),
+        defaults_difficulty: String::from(example_values::DEFAULTS_DIFFICULTY),
+        defaults_resources_cpu: String::from(example_values::DEFAULTS_RESOURCES_CPU),
+        defaults_resources_memory: String::from(example_values::DEFAULTS_RESOURCES_MEMORY),
         points: vec![
             points {
-                difficulty: String::from("1"),
-                min: String::from("1"),
-                max: String::from("1337"),
+                difficulty: String::from(example_values::POINTS_DIFFICULTY),
+                min: String::from(example_values::POINTS_MIN),
+                max: String::from(example_values::POINTS_MAX),
             },
             points {
                 difficulty: String::from("2"),
-                min: String::from("200"),
-                max: String::from("500"),
+                min: String::from("1"),
+                max: String::from("1337"),
             },
         ],
         profiles: vec![profile {
-            profile_name: String::from("default"),
-            frontend_url: String::from("https://ctf.coolguy.invalid"),
-            frontend_token: String::from("secretsecretsecret"),
-            challenges_domain: String::from("chals.coolguy.invalid"),
-            kubecontext: String::from("ctf-cluster"),
-            s3_bucket_name: String::from("ctf-bucket"),
-            s3_endpoint: String::from("s3.coolguy.invalid"),
-            s3_region: String::from("us-west-2"),
-            s3_accesskey: String::from("accesskey"),
-            s3_secretaccesskey: String::from("secretkey"),
+            profile_name: String::from(example_values::PROFILES_PROFILE_NAME),
+            frontend_url: String::from(example_values::PROFILES_FRONTEND_URL),
+            frontend_token: String::from(example_values::PROFILES_FRONTEND_TOKEN),
+            challenges_domain: String::from(example_values::PROFILES_CHALLENGES_DOMAIN),
+            kubecontext: String::from(example_values::PROFILES_KUBECONTEXT),
+            s3_bucket_name: String::from(example_values::PROFILES_S3_BUCKET_NAME),
+            s3_endpoint: String::from(example_values::PROFILES_S3_ENDPOINT),
+            s3_region: String::from(example_values::PROFILES_S3_REGION),
+            s3_accesskey: String::from(example_values::PROFILES_S3_ACCESSKEY),
+            s3_secretaccesskey: String::from(example_values::PROFILES_S3_SECRETACCESSKEY),
         }],
     };
 }

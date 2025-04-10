@@ -26,8 +26,7 @@ deploy:
     pwn/notsh: true
     web/bar: true
 
-profiles:
-{% for prof in options.profiles %}
+profiles: {% for prof in options.profiles %}
   {{ prof.profile_name}}:
     frontend_url: {{ prof.frontend_url }}
     frontend_token: {{ prof.frontend_token }}
