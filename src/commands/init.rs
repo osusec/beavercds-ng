@@ -7,7 +7,7 @@ use crate::init::{self as init, templatize_init};
 use crate::{access_handlers::frontend, commands::deploy};
 
 pub fn run(_interactive: &bool, _blank: &bool) {
-    let options: init::init_vars;
+    let options: init::InitVars;
 
     if *_interactive {
         options = match init::interactive_init() {

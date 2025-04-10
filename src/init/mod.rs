@@ -8,7 +8,7 @@ pub mod templates;
 pub mod example_values;
 
 #[derive(serde::Serialize)]
-pub struct init_vars {
+pub struct InitVars {
     pub flag_regex: String,
     pub registry_domain: String,
     pub registry_build_user: String,
@@ -18,18 +18,18 @@ pub struct init_vars {
     pub defaults_difficulty: String,
     pub defaults_resources_cpu: String,
     pub defaults_resources_memory: String,
-    pub points: Vec<points>,
-    pub profiles: Vec<profile>,
+    pub points: Vec<Points>,
+    pub profiles: Vec<Profile>,
 }
 
 #[derive(Clone, serde::Serialize)]
-pub struct points {
+pub struct Points {
     pub difficulty: String,
     pub min: String,
     pub max: String,
 }
 
-impl fmt::Display for points {
+impl fmt::Display for Points {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -40,7 +40,7 @@ impl fmt::Display for points {
 }
 
 #[derive(serde::Serialize)]
-pub struct profile {
+pub struct Profile {
     pub profile_name: String,
     pub frontend_url: String,
     pub frontend_token: String,
@@ -53,13 +53,13 @@ pub struct profile {
     pub s3_secretaccesskey: String,
 }
 
-pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
+pub fn interactive_init() -> inquire::error::InquireResult<InitVars> {
     println!("For all prompts below, simply press Enter to leave blank.");
     println!("All fields that can be set in rcds.yaml can also be set via environment variables.");
 
-    let points_ranks_reference: Vec<points>;
+    let points_ranks_reference: Vec<Points>;
 
-    let options = init_vars {
+    let options = InitVars {
         flag_regex: {
             //TODO:
             // - also provide regex examples in help
@@ -116,9 +116,9 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                 .with_default(false)
                 .prompt()?;
             println!("Challenge points are dynamic. For a static challenge, simply set minimum and maximum points to the same value.");
-            let mut points_ranks: Vec<points> = Vec::new();
+            let mut points_ranks: Vec<Points> = Vec::new();
             while again {
-                let points_obj = points {
+                let points_obj = Points {
                     difficulty: {
                         inquire::Text::new("Difficulty class:")
                         .with_validator(inquire::required!("Please provide a name."))
@@ -130,7 +130,7 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                     min: {
                         inquire::CustomType::<u64>::new("Minimum points:")
                         .with_error_message("Please type a valid number.") // default parser calls std::u64::from_str
-                        .with_help_message("Challenge points are dynamic. The minimum number of points that challenges within this difficulty class are worth.")
+                        .with_help_message("The minimum number of points that challenges within this difficulty class are worth.")
                         .with_placeholder(example_values::POINTS_MIN)
                         .prompt()?
                         .to_string()
@@ -196,15 +196,15 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
         profiles: {
             println!("You can define several environment profiles below.");
 
-            let mut again = inquire::Confirm::new("Do you want to provide a profile?")
+            let mut again = inquire::Confirm::new("Do you want to provide a Profile?")
                 .with_default(false)
                 .prompt()?;
-            let mut profiles: Vec<profile> = Vec::new();
+            let mut profiles: Vec<Profile> = Vec::new();
             while again {
-                let prof = profile {
+                let prof = Profile {
                     profile_name: {
                         inquire::Text::new("Profile name:")
-                        .with_help_message("The name of the deployment profile. One profile named \"default\" is recommended. You can add additional profiles.")
+                        .with_help_message("The name of the deployment Profile. One Profile named \"default\" is recommended. You can add additional profiles.")
                         .with_placeholder(example_values::PROFILES_PROFILE_NAME)
                         .prompt()?
                     },
@@ -267,7 +267,7 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                 };
                 profiles.push(prof);
 
-                again = inquire::Confirm::new("Do you want to provide another profile?")
+                again = inquire::Confirm::new("Do you want to provide another Profile?")
                     .with_default(false)
                     .prompt()?;
             }
@@ -277,8 +277,8 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
     return Ok(options);
 }
 
-pub fn blank_init() -> init_vars {
-    return init_vars {
+pub fn blank_init() -> InitVars {
+    return InitVars {
         flag_regex: String::new(),
         registry_domain: String::new(),
         registry_build_user: String::new(),
@@ -288,12 +288,12 @@ pub fn blank_init() -> init_vars {
         defaults_difficulty: String::new(),
         defaults_resources_cpu: String::new(),
         defaults_resources_memory: String::new(),
-        points: vec![points {
+        points: vec![Points {
             difficulty: String::new(),
             min: String::new(),
             max: String::new(),
         }],
-        profiles: vec![profile {
+        profiles: vec![Profile {
             profile_name: String::from(example_values::PROFILES_PROFILE_NAME),
             frontend_url: String::new(),
             frontend_token: String::new(),
@@ -308,8 +308,8 @@ pub fn blank_init() -> init_vars {
     };
 }
 
-pub fn example_init() -> init_vars {
-    return init_vars {
+pub fn example_init() -> InitVars {
+    return InitVars {
         flag_regex: String::from(example_values::FLAG_REGEX), // TODO: do that wildcard in the most common regex flavor since Rust regex supports multiple styles
         registry_domain: String::from(example_values::REGISTRY_DOMAIN),
         registry_build_user: String::from(example_values::REGISTRY_BUILD_USER),
@@ -320,18 +320,18 @@ pub fn example_init() -> init_vars {
         defaults_resources_cpu: String::from(example_values::DEFAULTS_RESOURCES_CPU),
         defaults_resources_memory: String::from(example_values::DEFAULTS_RESOURCES_MEMORY),
         points: vec![
-            points {
+            Points {
                 difficulty: String::from(example_values::POINTS_DIFFICULTY),
                 min: String::from(example_values::POINTS_MIN),
                 max: String::from(example_values::POINTS_MAX),
             },
-            points {
+            Points {
                 difficulty: String::from("2"),
                 min: String::from("1"),
                 max: String::from("1337"),
             },
         ],
-        profiles: vec![profile {
+        profiles: vec![Profile {
             profile_name: String::from(example_values::PROFILES_PROFILE_NAME),
             frontend_url: String::from(example_values::PROFILES_FRONTEND_URL),
             frontend_token: String::from(example_values::PROFILES_FRONTEND_TOKEN),
@@ -346,7 +346,7 @@ pub fn example_init() -> init_vars {
     };
 }
 
-pub fn templatize_init(options: init_vars) -> String {
+pub fn templatize_init(options: InitVars) -> String {
     let filled_template = minijinja::render!(templates::RCDS, options);
     return filled_template;
 }
