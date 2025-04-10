@@ -85,7 +85,7 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
             .prompt()?
         },
 
-        // TODO: do we actually want to be in charge of these credentials vs letting the container building utility take care of it?
+        // TODO: do we actually want to be in charge of these credentials vs expecting the local building utility already be logged in?
         registry_build_pass: {
             inquire::Password::new("Container registry 'build' password:")
             .with_help_message("The password to the 'build' user account") // TODO: could this support username:pat too?
@@ -115,24 +115,21 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
             let mut again = inquire::Confirm::new("Do you want to provide a difficulty class?")
                 .with_default(false)
                 .prompt()?;
+            println!("Challenge points are dynamic. For a static challenge, simply set minimum and maximum points to the same value.");
             let mut points_ranks: Vec<points> = Vec::new();
             while again {
                 let points_obj = points {
-                    // TODO: theres no reason these need to be numbers instead of open strings, e.g. for "easy"
                     difficulty: {
-                        inquire::CustomType::<u64>::new("Difficulty rank:")
-                        // default parser calls std::u64::from_str
-                        .with_error_message("Please type a valid number.")
-                        .with_help_message("The rank of the difficulty class as an unsigned integer, with lower numbers being \"easier.\"")
+                        inquire::Text::new("Difficulty class:")
+                        .with_validator(inquire::required!("Please provide a name."))
+                        .with_help_message("The name of the difficulty class.")
                         .with_placeholder(example_values::POINTS_DIFFICULTY)
                         .prompt()?
-                        .to_string()
                     },
                     // TODO: support static-point challenges
                     min: {
                         inquire::CustomType::<u64>::new("Minimum points:")
-                        // default parser calls std::u64::from_str
-                        .with_error_message("Please type a valid number.")
+                        .with_error_message("Please type a valid number.") // default parser calls std::u64::from_str
                         .with_help_message("Challenge points are dynamic. The minimum number of points that challenges within this difficulty class are worth.")
                         .with_placeholder(example_values::POINTS_MIN)
                         .prompt()?
@@ -140,8 +137,7 @@ pub fn interactive_init() -> inquire::error::InquireResult<init_vars> {
                     },
                     max: {
                         inquire::CustomType::<u64>::new("Maximum points:")
-                        // default parser calls std::u64::from_str
-                        .with_error_message("Please type a valid number.")
+                        .with_error_message("Please type a valid number.") // default parser calls std::u64::from_str
                         .with_help_message("The maximum number of points that challenges within this difficulty class are worth.")
                         .with_placeholder(example_values::POINTS_MAX)
                         .prompt()?
