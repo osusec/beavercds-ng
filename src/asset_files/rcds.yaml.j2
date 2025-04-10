@@ -18,7 +18,7 @@ points: {% for pts in options.points %}
     min: {{ pts.min }}
     max: {{ pts.max }}
 {% endfor %}
-# TODO
+# TODO: templatize the deploy section
 deploy:
   # control challenge deployment status explicitly per environment/profile
   testing:
@@ -31,6 +31,7 @@ profiles: {% for prof in options.profiles %}
     frontend_url: {{ prof.frontend_url }}
     frontend_token: {{ prof.frontend_token }}
     challenges_domain: {{ prof.challenges_domain }}
+    # TODO: kubeconfig
     kubecontext: {{ prof.kubecontext }}
     s3:
       bucket_name: {{ prof.s3_bucket_name }}

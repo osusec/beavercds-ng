@@ -61,10 +61,7 @@ pub fn interactive_init() -> inquire::error::InquireResult<InitVars> {
 
     let options = InitVars {
         flag_regex: {
-            //TODO:
-            // - also provide regex examples in help
-            // - is this even a good idea to have the user provide the regex
-            // - what kind of regex is being validated and accepted
+            //TODO: what flavor of regex is being validated and accepted
             inquire::Text::new("Flag regex:")
             .with_help_message("This regex will be used to validate the individual flags of your challenges later.")
             .with_placeholder(example_values::FLAG_REGEX)
@@ -101,7 +98,6 @@ pub fn interactive_init() -> inquire::error::InquireResult<InitVars> {
             .prompt()?
         },
 
-        // TODO: would the cluster not use a token of some sort?
         registry_cluster_pass: {
             inquire::Password::new("Container registry 'cluster' password:")
             .with_help_message("The password to the 'cluster' user account")
@@ -126,7 +122,6 @@ pub fn interactive_init() -> inquire::error::InquireResult<InitVars> {
                         .with_placeholder(example_values::POINTS_DIFFICULTY)
                         .prompt()?
                     },
-                    // TODO: support static-point challenges
                     min: {
                         inquire::CustomType::<u64>::new("Minimum points:")
                         .with_error_message("Please type a valid number.") // default parser calls std::u64::from_str
@@ -310,7 +305,7 @@ pub fn blank_init() -> InitVars {
 
 pub fn example_init() -> InitVars {
     return InitVars {
-        flag_regex: String::from(example_values::FLAG_REGEX), // TODO: do that wildcard in the most common regex flavor since Rust regex supports multiple styles
+        flag_regex: String::from(example_values::FLAG_REGEX),
         registry_domain: String::from(example_values::REGISTRY_DOMAIN),
         registry_build_user: String::from(example_values::REGISTRY_BUILD_USER),
         registry_build_pass: String::from(example_values::REGISTRY_BUILD_PASS),
