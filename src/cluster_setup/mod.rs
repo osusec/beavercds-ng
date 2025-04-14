@@ -111,6 +111,11 @@ fn install_helm_chart(
     namespace: &str,
     values: &str,
 ) -> Result<()> {
+    // make sure `helm` is available to run
+    duct::cmd!("helm", "version")
+        .read()
+        .context("helm binary is not available")?;
+
     // write values to tempfile
     let mut temp_values = tempfile::Builder::new()
         .prefix(release_name)
