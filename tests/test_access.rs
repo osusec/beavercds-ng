@@ -6,9 +6,9 @@ mod infra;
 use infra::{k3s_ctr, registry_ctr, s3_ctr, setup_test_repo};
 
 #[test]
-#[should_panic]
+// #[should_panic]
 fn test_check_kube_ok() {
-    todo!("k3s container does not work rootless");
+    // todo!("k3s container does not work rootless");
 
     figment::Jail::expect_with(|jail| {
         setup_test_repo(jail).unwrap();

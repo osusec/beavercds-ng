@@ -1,8 +1,8 @@
-use std::{thread, time::Duration};
+use std::{fs::File, io::Write, thread, time::Duration};
 
 use figment::Jail;
 use testcontainers::{
-    core::{wait::HttpWaitStrategy, IntoContainerPort, WaitFor},
+    core::{wait::HttpWaitStrategy, IntoContainerPort, Mount, WaitFor},
     GenericImage,
 };
 use testcontainers_modules::{
@@ -98,24 +98,63 @@ pub fn s3_ctr(j: &mut Jail) -> Container<GenericImage> {
 
 #[allow(dead_code)] // this is actually included in tests
 pub fn k3s_ctr(j: &mut Jail) -> Container<K3s> {
-    let kubeconf_tempdir = tempfile::tempdir().unwrap();
+    let kcfg_tempdir = tempfile::tempdir().unwrap();
+
+    // The upstream testcontainer for k3s does not work rootless, so define it
+    // manually with the needed flag added on rootless systems
+    //
     let k3s_instance = K3s::default()
-        .with_conf_mount(&kubeconf_tempdir)
+        .with_conf_mount(&kcfg_tempdir)
         .with_privileged(true)
         // .with_cmd(["server", "--disable=traefik@server:*", "--rootless"])
         .start()
         .unwrap();
 
     // let kube_port = k3s_instance.get_host_port_ipv4(KUBE_SECURE_PORT);
-    // let kube_conf = k3s_instance
-    //     .image()
-    //     .read_kube_config()
-    //     .expect("Cannot read kube conf");
 
-    j.set_env(
-        "BEAVERCDS_PROFILES_TESTING_KUBECONFIG",
-        kubeconf_tempdir.path().to_string_lossy(),
-    );
+    // write out kubeconfig
+    let kube_conf = k3s_instance
+        .image()
+        .read_kube_config()
+        .expect("Cannot read kube conf");
+
+    j.create_file("test.kubeconfig", &kube_conf)
+        .expect("could not write kubeconfig in jail");
+
+    // // nested func for tokio::main reasons
+    // #[tokio::main(flavor = "current_thread")] // make this a sync function
+    // async fn k3s_command() -> Vec<&'static str> {
+    //     // we have a helper for this! podman almost always means rootless
+    //     match beavercds_ng::clients::engine_type().await {
+    //         beavercds_ng::clients::EngineType::Docker => vec!["server"],
+    //         beavercds_ng::clients::EngineType::Podman => vec![
+    //             "server",
+    //             "--kubelet-arg=feature-gates=KubeletInUserNamespace=true",
+    //         ],
+    //     }
+    // }
+
+    // // TODO: pin to specific k8s version tag?
+    // let k3s_instance = GenericImage::new("docker.io/rancher/k3s", "latest")
+    //     .with_wait_for(WaitFor::message_on_stderr(
+    //         "Node controller sync successful",
+    //     ))
+    //     .with_mapped_port(6443, 6443.tcp())
+    //     .with_mapped_port(8000, 80.tcp())
+    //     .with_mapped_port(8443, 443.tcp())
+    //     // mount tempdir in for generated kubeconfig
+    //     .with_mount(Mount::bind_mount(
+    //         kubeconf_tempdir.path().to_str().unwrap(),
+    //         "/output",
+    //     ))
+    //     .with_env_var("K3S_TOKEN", "notsecure")
+    //     .with_env_var("K3S_KUBECONFIG_OUTPUT", "/output/kubeconfig.yaml")
+    //     .with_env_var("K3S_KUBECONFIG_MODE", "666")
+    //     .with_cmd(k3s_command().iter().map(<_>::to_string))
+    //     .start()
+    //     .unwrap();
+
+    j.set_env("BEAVERCDS_PROFILES_TESTING_KUBECONFIG", "test.kubeconfig");
     j.set_env("BEAVERCDS_PROFILES_TESTING_KUBECONTEXT", "default");
 
     k3s_instance
