@@ -28,3 +28,83 @@ jobs:
 
       - name: Run tests
         run: cargo nextest run --retries 2 -j 4
+
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - uses: taiki-e/install-action@nextest
+      - uses: rui314/setup-mold@v1
+
+      - name: Set up cargo cache
+        uses: actions/cache@v4
+        continue-on-error: false
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      # - name: Create K3D cluster
+      #   uses: AbsaOSS/k3d-action@v2
+      #   with:
+      #     cluster-name: test
+      #     args: >-
+      #       -p "8000:80@loadbalancer"
+      #       -p "8443:443@loadbalancer"
+      #       --k3s-arg "--no-deploy=traefik@server:*"
+
+      - name: Kubernetes KinD Cluster
+        id: kind
+        uses: helm/kind-action@v1
+        with:
+          registry: true
+          registry_name: my-registry
+          registry_port: 5001
+          registry_enable_delete: true
+
+      - name: Start MinIO Server
+        uses: comfuture/minio-action@v1
+        with:
+          access_key: testaccess
+          secret_key: testsecret
+          bucket_name: thebucket
+
+      - name: Deploy test repo
+        env:
+          BEAVERCDS_REGISTRY_DOMAIN: "${{ steps.kind.outputs.LOCAL_REGISTRY }}/testing"
+          # BEAVERCDS_PROFILES_TESTING_KUBECONTEXT: "k3d-k3s-default"
+          BEAVERCDS_PROFILES_TESTING_KUBECONTEXT: "kind-chart-testing"
+          BEAVERCDS_PROFILES_TESTING_S3_ENDPOINT: "http://localhost:9000"
+          BEAVERCDS_PROFILES_TESTING_S3_REGION: ""
+          BEAVERCDS_PROFILES_TESTING_S3_ACCESS_KEY: testaccess
+          BEAVERCDS_PROFILES_TESTING_S3_SECRET_KEY: testsecret
+          BEAVERCDS_PROFILES_TESTING_S3_BUCKET: thebucket
+        run: |
+          cd tests/repo
+
+          cargo run -- check-access --profile testing
+          cargo run -- deploy --profile testing
+
+      - name: Check deployed services
+        run: |
+          set -euxo pipefail
+
+          # web/bar
+          curl -sSL --fail-with-body -H 'Host: bar.chals.frontend.example' localhost:8000 | grep -q 'give me a drink'
+
+          # pwn/notsh
+          curl -sSL --fail-with-body -O http://localhost:9000/testbucket/assets/pwn/notsh/notsh
+          curl -sSL --fail-with-body -O http://localhost:9000/testbucket/assets/pwn/notsh/libc.so.6
+          curl -sSL --fail-with-body -O http://localhost:9000/testbucket/assets/pwn/notsh/notsh.zip
+
+          # misc/garf
+          curl -sSL --fail-with-body -O http://localhost:9000/testbucket/assets/misc/garf/garf.jpg
