@@ -14,6 +14,7 @@ use kube::api::{DynamicObject, Patch, PatchParams};
 use kube::runtime::WatchStreamExt;
 use kube::{Api, ResourceExt};
 use minijinja;
+use owo_colors::OwoColorize;
 use serde;
 use serde_yml;
 use tempfile;
@@ -161,7 +162,9 @@ fn install_helm_chart(
 
     for item in lines {
         match item {
-            Ok(line) => debug!("helm: <bright-black>{line}</>"),
+            Ok(line) => {
+                debug!("helm: {}", line.bright_black());
+            }
             Err(e) => return Err(e.into()),
         }
     }

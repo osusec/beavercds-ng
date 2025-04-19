@@ -8,6 +8,7 @@ use bollard::image::{BuildImageOptions, PushImageOptions};
 use bollard::Docker;
 use core::fmt;
 use futures::{StreamExt, TryStreamExt};
+use owo_colors::OwoColorize;
 use std::fs::File;
 use std::io::{Seek, Write};
 use std::path::PathBuf;
@@ -70,10 +71,10 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
 
                 if let Some(log) = msg.stream {
                     info!(
-                        "building {}: <bright-black>{}</>",
+                        "building {}: {}",
                         context.to_string_lossy(),
                         // tag,
-                        log.trim()
+                        log.trim().bright_black(),
                     )
                 }
             }
