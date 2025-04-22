@@ -1,12 +1,12 @@
 use anyhow::{anyhow, Context, Error, Result};
 use futures::FutureExt;
 use itertools::Itertools;
-use simplelog::{debug, trace};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
 use std::iter::repeat_with;
 use std::path::{Path, PathBuf};
 use tempfile::tempdir_in;
+use tracing::{debug, error, info, trace, warn};
 use zip;
 
 use crate::builder::docker;

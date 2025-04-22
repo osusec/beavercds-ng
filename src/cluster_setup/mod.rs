@@ -14,10 +14,11 @@ use kube::api::{DynamicObject, Patch, PatchParams};
 use kube::runtime::WatchStreamExt;
 use kube::{Api, ResourceExt};
 use minijinja;
+use owo_colors::OwoColorize;
 use serde;
 use serde_yml;
-use simplelog::*;
 use tempfile;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::{apply_manifest_yaml, kube_client};
 use crate::configparser::{config, get_config, get_profile_config};
@@ -161,7 +162,9 @@ fn install_helm_chart(
 
     for item in lines {
         match item {
-            Ok(line) => debug!("helm: <bright-black>{line}</>"),
+            Ok(line) => {
+                debug!("helm: {}", line.bright_black());
+            }
             Err(e) => return Err(e.into()),
         }
     }

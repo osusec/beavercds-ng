@@ -5,11 +5,11 @@ use anyhow::{anyhow, Context, Error, Result};
 use bollard::image::BuildImageOptions;
 use futures::stream::{FuturesOrdered, Iter};
 use itertools::Itertools;
-use simplelog::*;
 use std::default;
 use std::fmt::Pointer;
 use std::iter::zip;
 use std::path::{Path, PathBuf};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::configparser::challenge::{
     BuildObject, ChallengeConfig, ImageSource::*, Pod, ProvideConfig,

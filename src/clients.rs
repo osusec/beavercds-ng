@@ -18,7 +18,7 @@ use kube::{
     runtime::{conditions, wait::await_condition},
 };
 use s3;
-use simplelog::*;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::configparser::config;
 
