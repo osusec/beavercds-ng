@@ -4,8 +4,8 @@ use std::time::Duration;
 use anyhow::{anyhow, bail, Context, Error, Ok, Result};
 use itertools::Itertools;
 use minijinja;
-use simplelog::*;
 use tokio::time::timeout;
+use tracing::{debug, error, info, trace, warn};
 
 use crate::builder::BuildResult;
 use crate::clients::{apply_manifest_yaml, kube_client, wait_for_status};

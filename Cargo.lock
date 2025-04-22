@@ -271,6 +271,7 @@ dependencies = [
  "bollard",
  "clap",
  "duct",
+ "fastrand",
  "figment",
  "fully_pub",
  "futures",
