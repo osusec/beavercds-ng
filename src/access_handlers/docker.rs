@@ -6,6 +6,7 @@ use bollard::{
 };
 use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
+use minijinja::render;
 use tokio;
 use tracing::{debug, error, info, trace, warn};
 
@@ -26,7 +27,13 @@ pub async fn check(profile_name: &str) -> Result<()> {
 
     // build test image string
     // registry.example.com/somerepo/testimage:pleaseignore
-    let test_image = format!("{}/credstestimage", registry_config.domain);
+    let test_image = render!(
+        &registry_config.tag_format,
+        domain => registry_config.domain,
+        challenge => "accesscheck",
+        container => "testimage",
+        profile => profile_name
+    );
     debug!("will push test image to {}", test_image);
 
     // push alpine image with build credentials
@@ -66,16 +73,16 @@ async fn check_build_credentials(client: &Docker, test_image: &str) -> Result<()
 
     let registry_config = &get_config()?.registry;
 
-    // rename alpine image as test image
-    let tag_opts = TagImageOptions {
-        repo: test_image,
-        tag: "latest",
-    };
+    // rename alpine image as test imag
+    let (repo, tag) = test_image
+        .rsplit_once(':')
+        .unwrap_or((test_image, "latest"));
+    let tag_opts = TagImageOptions { repo, tag };
     client.tag_image("alpine", Some(tag_opts)).await?;
 
     // now push test iamge to configured repo
-    debug!("pushing alpine to target registry");
-    let options = PushImageOptions { tag: "latest" };
+    debug!("pushing alpine to target registry as {}:{}", repo, tag);
+    let options = PushImageOptions { tag };
     let build_creds = DockerCredentials {
         username: Some(registry_config.build.user.clone()),
         password: Some(registry_config.build.pass.clone()),
@@ -84,7 +91,7 @@ async fn check_build_credentials(client: &Docker, test_image: &str) -> Result<()
     };
 
     client
-        .push_image(test_image, Some(options), Some(build_creds))
+        .push_image(repo, Some(options), Some(build_creds))
         .try_collect::<Vec<_>>()
         .await?;
 
@@ -100,8 +107,11 @@ async fn check_cluster_credentials(client: &Docker, test_image: &str) -> Result<
     let registry_config = &get_config()?.registry;
 
     // pull just-pushed alpine image from repo
+    let (repo, tag) = test_image
+        .rsplit_once(':')
+        .unwrap_or((test_image, "latest"));
     let alpine_test_image = CreateImageOptions {
-        from_image: test_image,
+        from_image: [repo, tag].join(":"),
         ..Default::default()
     };
     let cluster_creds = DockerCredentials {
