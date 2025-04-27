@@ -18,6 +18,7 @@ pub fn parse() -> Result<RcdsConfig> {
         // keys by undoing the s/_/./ that the figment::split() did.
         var.to_string()
             .to_lowercase()
+            .replace("registry.tag.format", "registry.tag_format")
             .replace("frontend.", "frontend_")
             .replace("challenges.", "challenges_")
             .replace("s3.access.", "s3.access_")
