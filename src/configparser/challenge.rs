@@ -157,7 +157,7 @@ impl ChallengeConfig {
             ImageSource::Build(b) => Ok(render!(
                 &get_config()?.registry.tag_format,
                 domain => config.registry.domain,
-                challenge => self.name,
+                challenge => self.slugify(),
                 container => pod.name,
                 profile => profile_name
             )),
