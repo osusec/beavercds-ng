@@ -66,9 +66,11 @@ struct Registry {
     domain: String,
 
     /// Image tag format string. Useful if the registry forces a single
-    /// container repository (AWS...)
+    /// container repository. (AWS...)
     ///
-    /// Default: `"{domain}/{challenge}-{container}:{profile}"`
+    /// Format: Jinja-style double-braces around field name (`{{ field_name }}`)
+    ///
+    /// Default: `"{{domain}}/{{challenge}}-{{container}}:{{profile}}"`
     ///
     /// Available fields:
     /// - `domain`: the domain config field above; the repository base URL
@@ -80,9 +82,9 @@ struct Registry {
     ///
     /// For challenge `pwn/notsh`, chal pod container `main`, profile `prod`, and the example domain:
     /// ```py
-    /// "{domain}/{challenge}-{container}:{profile}" --> "registry.io/myctf/pwn-notsh-main:prod"
+    /// the default --> "registry.io/myctf/pwn-notsh-main:prod"
     ///
-    /// "{domain}:{challenge}-{container}" --> "registry.io/myctf:pwn-notsh-main"
+    /// "{{domain}}:{{challenge}}-{{container}}" --> "registry.io/myctf:pwn-notsh-main"
     /// ```
     #[serde(default = "default_tag_format")]
     tag_format: String,
@@ -93,7 +95,7 @@ struct Registry {
     cluster: UserPass,
 }
 fn default_tag_format() -> String {
-    "{domain}/{challenge}-{container}:{profile}".to_string()
+    "{{domain}}/{{challenge}}-{{container}}:{{profile}}".to_string()
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]

@@ -68,6 +68,131 @@ fn all_yaml() {
             flag_regex: "test{[a-zA-Z_]+}".to_string(),
             registry: Registry {
                 domain: "registry.example/test".to_string(),
+                tag_format: "{{domain}}/{{challenge}}-{{container}}:{{profile}}".to_string(),
+                build: UserPass {
+                    user: "admin".to_string(),
+                    pass: "notrealcreds".to_string(),
+                },
+                cluster: UserPass {
+                    user: "cluster".to_string(),
+                    pass: "alsofake".to_string(),
+                },
+            },
+            defaults: Defaults {
+                difficulty: 1,
+                resources: Resource {
+                    cpu: 1,
+                    memory: "500M".to_string(),
+                },
+            },
+            points: vec![ChallengePoints {
+                difficulty: 1,
+                min: 0,
+                max: 1337,
+            }],
+
+            deploy: HashMap::from([(
+                "testing".to_string(),
+                ProfileDeploy {
+                    challenges: HashMap::from([
+                        ("web/bar".to_string(), false),
+                        ("misc/foo".to_string(), true),
+                    ]),
+                },
+            )]),
+            profiles: HashMap::from([(
+                "testing".to_string(),
+                ProfileConfig {
+                    frontend_url: "https://frontend.example".to_string(),
+                    frontend_token: "secretsecretsecret".to_string(),
+                    challenges_domain: "chals.frontend.example".to_string(),
+                    kubeconfig: None,
+                    kubecontext: "testcluster".to_string(),
+                    s3: S3Config {
+                        bucket_name: "asset_testing".to_string(),
+                        endpoint: "s3.example".to_string(),
+                        region: "us-fake-1".to_string(),
+                        access_key: "accesskey".to_string(),
+                        secret_key: "secretkey".to_string(),
+                    },
+                    dns: serde_yml::to_value(HashMap::from([
+                        ("provider", "somebody"),
+                        ("thing", "whatever"),
+                    ]))
+                    .unwrap(),
+                },
+            )]),
+        };
+
+        assert_eq!(config, expected);
+
+        Ok(())
+    });
+}
+
+#[test]
+/// Test parsing RCDS config where all fields are specified in the yaml
+fn registry_tag_format() {
+    figment::Jail::expect_with(|jail| {
+        jail.clear_env();
+        jail.create_file(
+            "rcds.yaml",
+            r#"
+                flag_regex: test{[a-zA-Z_]+}
+
+                registry:
+                    domain: registry.example/test
+                    tag_format: "{{domain}}:{{challenge}}.{{container}}"
+                    build:
+                        user: admin
+                        pass: notrealcreds
+                    cluster:
+                        user: cluster
+                        pass: alsofake
+
+                defaults:
+                    difficulty: 1
+                    resources: { cpu: 1, memory: 500M }
+
+                points:
+                  - difficulty: 1
+                    min: 0
+                    max: 1337
+
+                deploy:
+                    testing:
+                        misc/foo: true
+                        web/bar: false
+
+                profiles:
+                    testing:
+                        frontend_url: https://frontend.example
+                        frontend_token: secretsecretsecret
+                        challenges_domain: chals.frontend.example
+                        kubecontext: testcluster
+                        s3:
+                            bucket_name: asset_testing
+                            endpoint: s3.example
+                            region: us-fake-1
+                            access_key: accesskey
+                            secret_key: secretkey
+                        dns:
+                            provider: somebody
+                            thing: whatever
+            "#,
+        )?;
+
+        let config = match parse() {
+            Ok(c) => Ok(c),
+            // figment::Error cannot coerce from anyhow::Error natively
+            Err(e) => Err(figment::Error::from(format!("{:?}", e))),
+        }?;
+
+        let expected = RcdsConfig {
+            flag_regex: "test{[a-zA-Z_]+}".to_string(),
+            registry: Registry {
+                domain: "registry.example/test".to_string(),
+                tag_format: "{{domain}}:{{challenge}}.{{container}}".to_string(),
                 build: UserPass {
                     user: "admin".to_string(),
                     pass: "notrealcreds".to_string(),

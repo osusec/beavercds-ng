@@ -4,6 +4,7 @@ use figment::Figment;
 use fully_pub::fully_pub;
 use glob::glob;
 use itertools::Itertools;
+use minijinja::render;
 use serde::{Deserialize, Serialize};
 use serde_nested_with::serde_nested;
 use std::collections::HashMap as Map;
@@ -12,7 +13,6 @@ use std::str::FromStr;
 use tracing::{debug, error, info, trace, warn};
 use void::Void;
 
-use crate::builder::image_tag_str;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 use crate::configparser::get_config;
@@ -153,12 +153,13 @@ impl ChallengeConfig {
 
         match &pod.image_source {
             ImageSource::Image(t) => Ok(t.to_string()),
-            ImageSource::Build(b) => Ok(format!(
-                image_tag_str!(),
-                registry = config.registry.domain,
-                challenge = self.name,
-                container = pod.name,
-                profile = profile_name
+            // render image tag template from config
+            ImageSource::Build(b) => Ok(render!(
+                &get_config()?.registry.tag_format,
+                domain => config.registry.domain,
+                challenge => self.name,
+                container => pod.name,
+                profile => profile_name
             )),
         }
     }
