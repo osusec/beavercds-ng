@@ -66,12 +66,17 @@ struct Registry {
     /// Example: `domain: "registry.io/myctf"`
     domain: String,
 
-    /// Image tag format string. Useful if the registry forces a single
-    /// container repository. (AWS...)
+    /// Container image tag format for challenge images.
     ///
-    /// Format: Jinja-style double-braces around field name (`{{ field_name }}`)
+    /// Format:
+    /// Jinja-style double-braces around field name (`{{ field_name }}`)
     ///
-    /// Default: `"{{domain}}/{{challenge}}-{{container}}:{{profile}}"`
+    /// Default, works for most registries (self-hosted, GCP, DigitalOcean, ...):
+    /// `"{{domain}}/{{challenge}}-{{container}}:{{profile}}"`
+    ///
+    /// For registries like AWS that make it hard to create individual repositories,
+    /// keep all the challenge info in the tag:
+    /// `"{{domain}}:{{challenge}}-{{container}}-{{profile}}"`
     ///
     /// Available fields:
     /// - `domain`: the domain config field above; the repository base URL
