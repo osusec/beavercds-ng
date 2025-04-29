@@ -2,6 +2,7 @@ flag_regex: dam{[a-zA-Z...]}
 
 registry:
   domain: localhost:5000/damctf
+  tag_format: "{{domain}}/{{challenge}}/{{container}}:{{profile}}"
   # or environment vars e.g. BEAVERCDS_REGISTRY_BUILD_USER / etc
   build:
     user: admin

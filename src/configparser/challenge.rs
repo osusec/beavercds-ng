@@ -12,7 +12,7 @@ use std::str::FromStr;
 use tracing::{debug, error, info, trace, warn};
 use void::Void;
 
-use crate::builder::image_tag_str;
+use crate::clients::render_strict;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 use crate::configparser::get_config;
@@ -153,13 +153,17 @@ impl ChallengeConfig {
 
         match &pod.image_source {
             ImageSource::Image(t) => Ok(t.to_string()),
-            ImageSource::Build(b) => Ok(format!(
-                image_tag_str!(),
-                registry = config.registry.domain,
-                challenge = self.name,
-                container = pod.name,
-                profile = profile_name
-            )),
+            // render image tag template from config
+            ImageSource::Build(b) => render_strict(
+                &get_config()?.registry.tag_format,
+                minijinja::context! {
+                    domain => config.registry.domain,
+                    challenge => self.slugify(),
+                    container => pod.name,
+                    profile => profile_name
+                },
+            )
+            .context("error rendering challenge image tag template"),
         }
     }
 

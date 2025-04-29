@@ -20,14 +20,6 @@ use crate::utils::TryJoinAll;
 pub mod artifacts;
 pub mod docker;
 
-// define tag format as reusable macro
-macro_rules! image_tag_str {
-    () => {
-        "{registry}/{challenge}-{container}:{profile}"
-    };
-}
-pub(super) use image_tag_str;
-
 /// Information about all of a challenge's build artifacts.
 #[derive(Debug)]
 pub struct BuildResult {

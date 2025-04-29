@@ -18,6 +18,7 @@ pub fn parse() -> Result<RcdsConfig> {
         // keys by undoing the s/_/./ that the figment::split() did.
         var.to_string()
             .to_lowercase()
+            .replace("registry.tag.format", "registry.tag_format")
             .replace("frontend.", "frontend_")
             .replace("challenges.", "challenges_")
             .replace("s3.access.", "s3.access_")
@@ -60,9 +61,47 @@ struct RcdsConfig {
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[fully_pub]
 struct Registry {
+    /// Registry base url used to build part of the full image string.
+    ///
+    /// Example: `domain: "registry.io/myctf"`
     domain: String,
+
+    /// Container image tag format for challenge images.
+    ///
+    /// Format:
+    /// Jinja-style double-braces around field name (`{{ field_name }}`)
+    ///
+    /// Default, works for most registries (self-hosted, GCP, DigitalOcean, ...):
+    /// `"{{domain}}/{{challenge}}-{{container}}:{{profile}}"`
+    ///
+    /// For registries like AWS that make it hard to create individual repositories,
+    /// keep all the challenge info in the tag:
+    /// `"{{domain}}:{{challenge}}-{{container}}-{{profile}}"`
+    ///
+    /// Available fields:
+    /// - `domain`: the domain config field above; the repository base URL
+    /// - `challenge`: challenge name, slugified
+    /// - `container`: name of the specific pod in the challenge this image is for
+    /// - `profile`: the current deployment profile, for isolating images between environments
+    ///
+    /// Example:
+    ///
+    /// For challenge `pwn/notsh`, chal pod container `main`, profile `prod`, and the example domain:
+    /// ```py
+    /// the default --> "registry.io/myctf/pwn-notsh-main:prod"
+    ///
+    /// "{{domain}}:{{challenge}}-{{container}}" --> "registry.io/myctf:pwn-notsh-main"
+    /// ```
+    #[serde(default = "default_tag_format")]
+    tag_format: String,
+
+    /// Container registry login for pushing images during build/deploy
     build: UserPass,
+    /// Container registry login for pulling images in cluster. Can and should be read-only.
     cluster: UserPass,
+}
+fn default_tag_format() -> String {
+    "{{domain}}/{{challenge}}-{{container}}:{{profile}}".to_string()
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
