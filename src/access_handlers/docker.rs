@@ -6,11 +6,11 @@ use bollard::{
 };
 use futures::{StreamExt, TryStreamExt};
 use itertools::Itertools;
-use minijinja::render;
+use minijinja;
 use tokio;
 use tracing::{debug, error, info, trace, warn};
 
-use crate::clients::docker;
+use crate::clients::{docker, render_strict};
 use crate::configparser::{get_config, get_profile_config};
 
 /// container registry / daemon access checks
@@ -27,13 +27,16 @@ pub async fn check(profile_name: &str) -> Result<()> {
 
     // build test image string
     // registry.example.com/somerepo/testimage:pleaseignore
-    let test_image = render!(
+    let test_image = render_strict(
         &registry_config.tag_format,
+        minijinja::context! {
         domain => registry_config.domain,
         challenge => "accesscheck",
         container => "testimage",
         profile => profile_name
-    );
+        },
+    )
+    .context("could not render tag format template")?;
     debug!("will push test image to {}", test_image);
 
     // push alpine image with build credentials
