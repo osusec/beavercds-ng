@@ -38,4 +38,8 @@ spec:
               name: "rcds-{{ slug }}-{{ pod.name }}-http"
               port:
                 number: {{ p.internal }}
+
+      tls:
+        - hosts: [ "{{ p.expose.http }}.{{ domain }}" ]
+          secretName: "rcds-tls-{{ p.expose.http }}.{{ domain }}"
   {% endfor -%}
