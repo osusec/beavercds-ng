@@ -12,10 +12,10 @@ use std::str::FromStr;
 use tracing::{debug, error, info, trace, warn};
 use void::Void;
 
-use crate::clients::render_strict;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 use crate::configparser::get_config;
+use crate::utils::render_strict;
 
 pub fn parse_all() -> Result<Vec<ChallengeConfig>, Vec<Error>> {
     // find all challenge.yaml files
