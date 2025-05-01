@@ -22,6 +22,7 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::{apply_manifest_yaml, kube_client};
 use crate::configparser::{config, get_config, get_profile_config};
+use crate::utils::render_strict;
 
 // Deploy cluster resources needed for challenges to work.
 //
@@ -69,9 +70,17 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     let client = kube_client(profile).await?;
 
     // letsencrypt and letsencrypt-staging
-    const ISSUERS_YAML: &str =
+    const ISSUERS_TEMPLATE: &str =
         include_str!("../asset_files/setup_manifests/letsencrypt.issuers.yaml");
-    apply_manifest_yaml(&client, ISSUERS_YAML).await?;
+
+    let issuers_yaml = render_strict(
+        ISSUERS_TEMPLATE,
+        minijinja::context! {
+            chal_domain => profile.challenges_domain
+        },
+    )?;
+
+    apply_manifest_yaml(&client, &issuers_yaml).await?;
 
     Ok(())
 }
@@ -83,11 +92,14 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
         include_str!("../asset_files/setup_manifests/external-dns.helm.yaml.j2");
 
     // add profile dns: field directly to chart values
-    let values = minijinja::render!(
+    let values = render_strict(
         VALUES_TEMPLATE,
-        provider_credentials => serde_yml::to_string(&profile.dns)?,
-        chal_domain => profile.challenges_domain
-    );
+        minijinja::context! {
+            provider_credentials => serde_yml::to_string(&profile.dns)?,
+            chal_domain => profile.challenges_domain
+        },
+    )?;
+
     trace!("deploying templated external-dns values:\n{}", values);
 
     install_helm_chart(
