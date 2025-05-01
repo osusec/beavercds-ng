@@ -4,7 +4,7 @@ metadata:
   name: letsencrypt
 spec:
   acme:
-    server: https://acme-v02.api.letsencrypt.org/directory"
+    server: https://acme-v02.api.letsencrypt.org/directory
     # TODO: use user email?
     email: beavercds-prod@{{ chal_domain }}
     privateKeySecretRef:
