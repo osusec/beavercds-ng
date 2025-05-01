@@ -40,7 +40,8 @@ pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
     install_helm_chart(
         profile,
         "ingress-nginx",
-        Some("https://kubernetes.github.io/ingress-nginx"),
+        "https://kubernetes.github.io/ingress-nginx",
+        None,
         "ingress-nginx",
         INGRESS_NAMESPACE,
         VALUES,
@@ -57,7 +58,8 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     install_helm_chart(
         profile,
         "cert-manager",
-        Some("https://charts.jetstack.io"),
+        "https://charts.jetstack.io",
+        None,
         "cert-manager",
         INGRESS_NAMESPACE,
         VALUES,
@@ -90,7 +92,8 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
 
     install_helm_chart(
         profile,
-        "oci://registry-1.docker.io/bitnamicharts/external-dns",
+        "external-dns",
+        "https://kubernetes-sigs.github.io/external-dns",
         None,
         "external-dns",
         INGRESS_NAMESPACE,
@@ -106,7 +109,8 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
 fn install_helm_chart(
     profile: &config::ProfileConfig,
     chart: &str,
-    repo: Option<&str>,
+    repo: &str,
+    version: Option<&str>,
     release_name: &str,
     namespace: &str,
     values: &str,
@@ -123,8 +127,8 @@ fn install_helm_chart(
         .tempfile()?;
     temp_values.write_all(values.as_bytes())?;
 
-    let repo_arg = match repo {
-        Some(r) => format!("--repo {r}"),
+    let version_arg = match version {
+        Some(v) => format!("--version {v}"),
         None => "".to_string(),
     };
 
@@ -139,7 +143,7 @@ fn install_helm_chart(
         r#"
         upgrade --install
             {release_name}
-            {chart} {repo_arg}
+            {chart} --repo {repo} {version_arg}
             --namespace {namespace} --create-namespace
             --values {}
             --wait --timeout 1m

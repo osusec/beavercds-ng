@@ -1,6 +1,6 @@
 use beavercds_ng::commands;
 use clap::Parser;
-use tracing::{trace, Level};
+use tracing::{error, trace, Level};
 use tracing_subscriber::{
     fmt::{format::FmtSpan, time},
     EnvFilter,
