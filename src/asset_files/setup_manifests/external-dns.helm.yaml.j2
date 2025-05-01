@@ -2,8 +2,6 @@
 rbac:
   create: true
 
-{{ provider_credentials }}
-
 # Watch these resources for new DNS records
 sources:
   - service
@@ -32,3 +30,6 @@ resources:
     cpu: 10m
 
 logLevel: debug
+
+# assign last to override any previous values if required
+{{ provider_credentials }}
