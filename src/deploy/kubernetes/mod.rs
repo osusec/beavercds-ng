@@ -12,7 +12,7 @@ use crate::clients::{apply_manifest_yaml, kube_client, wait_for_status};
 use crate::configparser::challenge::ExposeType;
 use crate::configparser::config::ProfileConfig;
 use crate::configparser::{get_config, get_profile_config, ChallengeConfig};
-use crate::utils::TryJoinAll;
+use crate::utils::{render_strict, TryJoinAll};
 
 pub mod templates;
 
@@ -73,10 +73,10 @@ async fn deploy_single_challenge(
 
     let kube = kube_client(profile).await?;
 
-    let ns_manifest = minijinja::render!(
+    let ns_manifest = render_strict(
         templates::CHALLENGE_NAMESPACE,
-        chal, slug => chal.slugify()
-    );
+        minijinja::context! { chal, slug => chal.slugify() },
+    )?;
     trace!("NAMESPACE:\n{}", ns_manifest);
 
     debug!("applying namespace for chal {:?}", chal.directory);
@@ -94,10 +94,13 @@ async fn deploy_single_challenge(
 
     for pod in &chal.pods {
         let pod_image = chal.container_tag_for_pod(profile_name, &pod.name)?;
-        let depl_manifest = minijinja::render!(
+        let depl_manifest = render_strict(
             templates::CHALLENGE_DEPLOYMENT,
-            chal, pod, pod_image, profile_name, slug => chal.slugify(),
-        );
+            minijinja::context! {
+                chal, pod, pod_image, profile_name,
+                slug => chal.slugify(),
+            },
+        )?;
         trace!("DEPLOYMENT:\n{}", depl_manifest);
 
         debug!(
@@ -132,10 +135,13 @@ async fn deploy_single_challenge(
             .partition(|p| matches!(p.expose, ExposeType::Tcp(_)));
 
         if !tcp_ports.is_empty() {
-            let tcp_manifest = minijinja::render!(
+            let tcp_manifest = render_strict(
                 templates::CHALLENGE_SERVICE_TCP,
-                chal, pod, tcp_ports, slug => chal.slugify(), domain => profile.challenges_domain
-            );
+                minijinja::context! {
+                    chal, pod, tcp_ports,
+                    slug => chal.slugify(), domain => profile.challenges_domain
+                },
+            )?;
             trace!("TCP SERVICE:\n{}", tcp_manifest);
 
             debug!(
@@ -168,10 +174,13 @@ async fn deploy_single_challenge(
         }
 
         if !http_ports.is_empty() {
-            let http_manifest = minijinja::render!(
+            let http_manifest = render_strict(
                 templates::CHALLENGE_SERVICE_HTTP,
-                chal, pod, http_ports, slug => chal.slugify(), domain => profile.challenges_domain
-            );
+                minijinja::context! {
+                    chal, pod, http_ports,
+                    slug => chal.slugify(), domain => profile.challenges_domain
+                },
+            )?;
             trace!("HTTP INGRESS:\n{}", http_manifest);
 
             debug!(
