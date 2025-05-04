@@ -20,6 +20,8 @@ txtPrefix: "k8s-owner."
 extraArgs:
   # special character replacement
   - --txt-wildcard-replacement=star
+  # use CNAME instead of ALIAS for alb targets
+  - --aws-prefer-cname
 
 ## Limit external-dns resources
 resources:
