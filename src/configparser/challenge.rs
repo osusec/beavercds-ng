@@ -122,7 +122,36 @@ pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
 pub struct ChallengeConfig {
     name: String,
     author: String,
+
+    /// Challenge description, displayed to players on the frontend.
+    /// Supports markdown and Jinja-style templating for challenge info via
+    /// [minijinja](https://docs.rs/minijinja).
+    ///
+    /// The Jinja template fields available are:
+    ///
+    /// | Field name  | Description |
+    /// | ----------- | ----------- |
+    /// | `hostname`  | The hostname or domain for the challenge
+    /// | `port`      | The port that the challenge is listening on
+    /// | `nc`        | Insert the `nc` command to connect to TCP challenges (`nc {{hostname}} {{port}}`)
+    /// | `link`      | Create a Markdown link to the exposed hostname/port
+    /// | `url`       | The URL from `link` without the accompanying Markdown
+    /// | `challenge` | The full challenge.yaml config for this challenge, with subfields
+    ///
+    /// Example:
+    ///
+    /// ```yaml
+    /// description: |
+    ///     Some example challenge. Blah blah blah flavor text.
+    ///
+    ///     In case you missed it, this was written by {{ challenge.author }}
+    ///     and is called {{ challenge.name }}.
+    ///
+    ///     {{ link }}    # -becomes-> [example.chals.thectf.com](https://example.chals.thectf.com)
+    ///     {{ nc }}      # -becomes-> `nc example.chals.thectf.com 12345`
+    /// ```
     description: String,
+
     category: String,
 
     directory: PathBuf,
