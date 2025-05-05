@@ -12,7 +12,7 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: beavercds
 
 ---
 apiVersion: cert-manager.io/v1
@@ -29,4 +29,4 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: beavercds
