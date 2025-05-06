@@ -19,6 +19,8 @@ spec:
       labels:
         rctf/part-of: "{{ slug }}-{{ pod.name }}"
     spec:
+      imagePullSecrets:
+        - name: "rcds-{{ slug }}-pull"
       containers:
         - name: "{{ pod.name }}"
           image: "{{ pod_image }}"

@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Context, Error, Ok, Result};
+use base64ct::{Base64, Encoding};
+use bollard::auth::DockerCredentials;
 use itertools::Itertools;
 use minijinja;
 use tokio::time::timeout;
@@ -17,7 +19,7 @@ use crate::utils::{render_strict, TryJoinAll};
 pub mod templates;
 
 /// How and where a challenge was deployed/exposed at
-pub struct DeployResult {
+pub struct KubeDeployResult {
     // challenges could have multiple exposed services
     pub exposed: Vec<PodDeployResult>,
 }
@@ -31,7 +33,7 @@ pub enum PodDeployResult {
 pub async fn deploy_challenges(
     profile_name: &str,
     build_results: &[(&ChallengeConfig, BuildResult)],
-) -> Result<Vec<DeployResult>> {
+) -> Result<Vec<KubeDeployResult>> {
     let profile = get_profile_config(profile_name)?;
 
     // Kubernetes deployment needs to:
@@ -65,7 +67,7 @@ pub async fn deploy_challenges(
 async fn deploy_single_challenge(
     profile_name: &str,
     chal: &ChallengeConfig,
-) -> Result<DeployResult> {
+) -> Result<KubeDeployResult> {
     info!("  deploying chal {:?}...", chal.directory);
     // render templates
 
@@ -90,7 +92,29 @@ async fn deploy_single_challenge(
         .try_join_all()
         .await?;
 
-    let results = DeployResult { exposed: vec![] };
+    // add image pull credentials to the new namespace
+    debug!(
+        "applying namespace pull credentials for chal {:?}",
+        chal.directory
+    );
+
+    let registry = &get_config()?.registry;
+    let creds_manifest = render_strict(
+        templates::IMAGE_PULL_CREDS_SECRET,
+        minijinja::context! {
+            slug => chal.slugify(),
+            registry_domain => registry.domain,
+            creds_b64 => Base64::encode_string(format!("{}:{}",
+                registry.cluster.user,
+                registry.cluster.pass,
+            ).as_bytes()),
+        },
+    )?;
+    apply_manifest_yaml(&kube, &creds_manifest).await?;
+
+    // namespace boilerplate over, deploy actual challenge pods
+
+    let results = KubeDeployResult { exposed: vec![] };
 
     for pod in &chal.pods {
         let pod_image = chal.container_tag_for_pod(profile_name, &pod.name)?;

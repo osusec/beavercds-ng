@@ -11,3 +11,6 @@ pub static CHALLENGE_SERVICE_HTTP: &str =
 
 pub static CHALLENGE_SERVICE_TCP: &str =
     include_str!("../../asset_files/challenge_templates/tcp.yaml.j2");
+
+pub static IMAGE_PULL_CREDS_SECRET: &str =
+    include_str!("../../asset_files/challenge_templates/pull-secret.yaml.j2");
