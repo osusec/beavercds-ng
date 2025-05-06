@@ -102,7 +102,8 @@ Files to give to players as downloads in frontend.
 
 These can be from the challenge folder in the repository, or from the
 challenge's built container. These can also be zipped together into one file, or
-uploaded separately.
+uploaded separately. These need to be files, directories or globs are not (yet)
+supported.
 
 This can be omitted if there are no files provided.
 
