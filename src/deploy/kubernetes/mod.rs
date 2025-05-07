@@ -29,46 +29,18 @@ pub enum PodDeployResult {
     Tcp { port: usize },
 }
 
-/// Render challenge manifest templates and apply to cluster
-pub async fn deploy_challenges(
-    profile_name: &str,
-    build_results: &[(&ChallengeConfig, BuildResult)],
-) -> Result<Vec<KubeDeployResult>> {
-    let profile = get_profile_config(profile_name)?;
-
-    // Kubernetes deployment needs to:
-    // 1. render manifests
-    //   - namespace
-    //   - challenge pod deployment(s)
-    //   - service
-    //   - ingress
-    //
-    // 2. update ingress controller tcp ports
-    //
-    // 3. wait for all challenges to become ready
-    //
-    // 4. record domains and IPs of challenges to pass to frontend (?)
-
-    let results = build_results
-        .iter()
-        .map(|(chal, _)| deploy_single_challenge(profile_name, chal))
-        .try_join_all()
-        .await?;
-
-    update_ingress_tcp().await?;
-
-    Ok(results)
-}
-
 // Deploy all K8S resources for a single challenge `chal`.
 //
 // Creates the challenge namespace, deployments, services, and ingresses needed
 // to deploy and expose the challenge.
-async fn deploy_single_challenge(
+pub async fn apply_challenge_resources(
     profile_name: &str,
     chal: &ChallengeConfig,
 ) -> Result<KubeDeployResult> {
-    info!("  deploying chal {:?}...", chal.directory);
+    info!(
+        "  deploying kube resources for chal {:?}...",
+        chal.directory
+    );
     // render templates
 
     let profile = get_profile_config(profile_name)?;
@@ -127,9 +99,10 @@ async fn deploy_single_challenge(
         )?;
         trace!("DEPLOYMENT:\n{}", depl_manifest);
 
-        debug!(
+        trace!(
             "applying deployment for chal {:?} pod {:?}",
-            chal.directory, pod.name
+            chal.directory,
+            pod.name
         );
         let depl = apply_manifest_yaml(&kube, &depl_manifest).await?;
         for object in depl {
@@ -240,6 +213,7 @@ async fn deploy_single_challenge(
 // Updates the current ingress controller chart with the current set of TCP
 // ports needed for challenges.
 // TODO: move to Gateway to avoid needing to redeploy ingress?
-async fn update_ingress_tcp() -> Result<()> {
-    Ok(())
-}
+// TODO: is this needed? currently TCP challenges are separate LoadBalancer svcs
+// async fn update_ingress_tcp() -> Result<()> {
+//     Ok(())
+// }

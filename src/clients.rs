@@ -222,7 +222,7 @@ pub async fn apply_manifest_yaml(
     // this manifest has multiple documents (crds, deployment)
     for yaml in multidoc_deserialize(manifest)? {
         let obj: DynamicObject = serde_yml::from_value(yaml)?;
-        debug!(
+        trace!(
             "applying resource {} {}",
             obj.types.clone().unwrap_or_default().kind,
             obj.name_any()

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use itertools::Itertools;
 use std::process::exit;
 use tracing::{debug, error, info, trace, warn};
@@ -29,23 +29,9 @@ pub async fn run(profile_name: &str, no_build: &bool, _dry_run: &bool) -> Result
         build_results.iter().map(|b| &b.1).collect_vec()
     );
 
-    // deploy needs to:
-    // A) render kubernetes manifests
-    //    - namespace, deployment, service, ingress
-    //    - upgrade ingress config with new listen ports
-    //
-    // B) upload asset files to bucket
-    //
-    // C) update frontend with new state of challenges
-
-    // A)
-    deploy::kubernetes::deploy_challenges(profile_name, &build_results).await?;
-
-    // B)
-    deploy::s3::upload_assets(profile_name, &build_results).await?;
-
-    // C)
-    deploy::frontend::update_frontend(profile_name, &build_results).await?;
+    deploy::deploy_challenges(profile_name, &build_results)
+        .await
+        .context("could not deploy challenges")?;
 
     Ok(())
 }
