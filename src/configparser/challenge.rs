@@ -305,10 +305,16 @@ struct Pod {
     #[serde(default)]
     env: ListOrMap,
 
+    #[serde(default = "default_architecture")]
+    architecture: String,
+
     resources: Option<Resource>,
     replicas: i64,
     ports: Vec<PortConfig>,
     volume: Option<String>,
+}
+fn default_architecture() -> String {
+    "amd64".to_string()
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

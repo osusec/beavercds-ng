@@ -357,6 +357,7 @@ fn challenge_pods() {
                     replicas: 2,
                     env: ListOrMap::Map(HashMap::new()),
                     resources: None,
+                    architecture: "amd64".to_string(),
                     ports: vec![PortConfig {
                         internal: 80,
                         expose: ExposeType::Http("test.chals.example.com".to_string())
@@ -373,6 +374,7 @@ fn challenge_pods() {
                     replicas: 1,
                     env: ListOrMap::Map(HashMap::new()),
                     resources: None,
+                    architecture: "amd64".to_string(),
                     ports: vec![PortConfig {
                         internal: 8000,
                         expose: ExposeType::Tcp(12345)
@@ -442,6 +444,7 @@ fn challenge_pod_build() {
                     replicas: 1,
                     env: ListOrMap::Map(HashMap::new()),
                     resources: None,
+                    architecture: "amd64".to_string(),
                     ports: vec![PortConfig {
                         internal: 80,
                         expose: ExposeType::Http("test.chals.example.com".to_string())
@@ -461,6 +464,7 @@ fn challenge_pod_build() {
                     replicas: 1,
                     env: ListOrMap::Map(HashMap::new()),
                     resources: None,
+                    architecture: "amd64".to_string(),
                     ports: vec![PortConfig {
                         internal: 80,
                         expose: ExposeType::Http("test2.chals.example.com".to_string())
@@ -530,6 +534,7 @@ fn challenge_pod_env() {
                         ("BAR".to_string(), "that".to_string()),
                     ])),
                     resources: None,
+                    architecture: "amd64".to_string(),
                     ports: vec![PortConfig {
                         internal: 80,
                         expose: ExposeType::Http("test.chals.example.com".to_string())
@@ -545,6 +550,7 @@ fn challenge_pod_env() {
                         ("BAR".to_string(), "that".to_string()),
                     ])),
                     resources: None,
+                    architecture: "amd64".to_string(),
                     ports: vec![PortConfig {
                         internal: 80,
                         expose: ExposeType::Http("test2.chals.example.com".to_string())

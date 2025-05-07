@@ -21,6 +21,8 @@ spec:
     spec:
       imagePullSecrets:
         - name: "rcds-{{ slug }}-pull"
+      nodeSelector:
+        kubernetes.io/arch: {{ pod.architecture }}
       containers:
         - name: "{{ pod.name }}"
           image: "{{ pod_image }}"
