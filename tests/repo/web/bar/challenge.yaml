@@ -8,7 +8,7 @@ description: |
 difficulty: 1
 
 flag:
-  file: ./flag
+  file: ./site_source/flag
 
 # each individual pod is gonna allow only 1 container for now
 pods:
