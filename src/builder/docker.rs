@@ -29,7 +29,12 @@ pub struct ContainerInfo {
     id: String,
 }
 
-pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Result<String> {
+pub async fn build_image(
+    context: &Path,
+    options: &BuildObject,
+    tag: &str,
+    arch: &str,
+) -> Result<String> {
     trace!("building image in directory {context:?} to tag {tag:?}");
     let client = docker().await?;
 
@@ -38,6 +43,7 @@ pub async fn build_image(context: &Path, options: &BuildObject, tag: &str) -> Re
         buildargs: options.args.clone(),
         t: tag.to_string(),
         forcerm: true,
+        platform: format!("linux/{arch}"),
         ..Default::default()
     };
 
