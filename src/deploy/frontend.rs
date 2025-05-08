@@ -109,7 +109,7 @@ author   | `{author}`
         author = chal.author,
         desc = rendered_desc,
         asset_urls = asset_urls,
-        flag = flag,
+        flag = flag.trim(),
     );
 
     // TODO: proper frontend updates
