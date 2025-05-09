@@ -136,7 +136,7 @@ pub async fn apply_challenge_resources(
                 templates::CHALLENGE_SERVICE_TCP,
                 minijinja::context! {
                     chal, pod, tcp_ports,
-                    slug => chal.slugify(), domain => profile.challenges_domain
+                    slug => chal.slugify(), name_slug => chal.slugify_name(), domain => profile.challenges_domain
                 },
             )?;
             trace!("TCP SERVICE:\n{}", tcp_manifest);

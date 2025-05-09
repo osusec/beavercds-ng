@@ -124,7 +124,7 @@ fn chal_domain(chal: &ChallengeConfig, chal_domain: &str) -> String {
     match chal.pods.iter().find(|p| !p.ports.is_empty()) {
         Some(p) => {
             let subdomain = match &p.ports[0].expose {
-                ExposeType::Tcp(_port) => &chal.name,
+                ExposeType::Tcp(_port) => &chal.slugify_name(),
                 ExposeType::Http(hostname) => hostname,
             };
             format!("{subdomain}.{chal_domain}")

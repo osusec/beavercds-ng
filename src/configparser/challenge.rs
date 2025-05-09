@@ -209,6 +209,17 @@ impl ChallengeConfig {
             .split_whitespace()
             .join("-")
     }
+
+    /// Create challenge name slug from directory path (without category)
+    pub fn slugify_name(&self) -> String {
+        self.directory
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_lowercase()
+            .split_whitespace()
+            .join("-")
+    }
 }
 
 fn default_difficulty() -> i64 {
