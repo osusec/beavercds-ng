@@ -37,6 +37,7 @@ pub async fn update_frontend(
         minijinja::context! {
             challenge => chal,
             host => hostname,
+            hostname => hostname,
             port => chal_port(chal),
             nc => format!("`nc {} {}`", hostname, chal_port(chal)),
             url => format!("[https://{hostname}](https://{hostname})", ),
