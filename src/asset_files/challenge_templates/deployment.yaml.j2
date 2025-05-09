@@ -19,9 +19,14 @@ spec:
       labels:
         rctf/part-of: "{{ slug }}-{{ pod.name }}"
     spec:
+      imagePullSecrets:
+        - name: "rcds-{{ slug }}-pull"
+      nodeSelector:
+        kubernetes.io/arch: {{ pod.architecture }}
       containers:
         - name: "{{ pod.name }}"
           image: "{{ pod_image }}"
+          imagePullPolicy: Always
           ports:
             {% for p in pod.ports -%}
             - containerPort: {{ p.internal }}

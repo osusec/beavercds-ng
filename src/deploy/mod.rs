@@ -7,11 +7,16 @@ use itertools::Itertools;
 use k8s_openapi::api::core::v1::Secret;
 use kube::api::ListParams;
 use std::env::current_exe;
+use std::fs::File;
+use std::io::Write;
 use tracing::{debug, error, info, trace, warn};
 
+use crate::builder::BuildResult;
 use crate::clients::kube_client;
 use crate::cluster_setup;
 use crate::configparser::config::ProfileConfig;
+use crate::configparser::{get_profile_config, ChallengeConfig};
+use crate::utils::TryJoinAll;
 
 /// check to make sure that the needed ingress charts are deployed and running
 pub async fn check_setup(profile: &ProfileConfig) -> Result<()> {
@@ -105,4 +110,58 @@ pub async fn check_setup(profile: &ProfileConfig) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+/// For each challenge, deploy/upload all components of the challenge
+pub async fn deploy_challenges(
+    profile_name: &str,
+    build_results: &[(&ChallengeConfig, BuildResult)],
+) -> Result<Vec<()>> {
+    let profile = get_profile_config(profile_name)?;
+
+    let mut md_file = File::create(format!("challenge-info-{profile_name}.md"))?;
+    md_file.write_all(b"# Challenge Information\n\n")?;
+    let md_lock = std::sync::Mutex::new(md_file);
+
+    build_results
+        .iter()
+        .map(|(chal, build)| async {
+            let chal_md = deploy_single_challenge(profile_name, chal, build)
+                .await
+                .with_context(|| format!("could not deploy challenge {:?}", chal.directory))?;
+
+            debug!("writing chal {:?} info to file", chal.directory);
+            md_lock.lock().unwrap().write_all(chal_md.as_bytes())?;
+
+            Ok(())
+        })
+        .try_join_all()
+        .await
+}
+
+/// Deploy / upload all components of a single challenge.
+async fn deploy_single_challenge(
+    profile_name: &str,
+    chal: &ChallengeConfig,
+    build_result: &BuildResult,
+) -> Result<String> {
+    info!("  deploying chal {:?}...", chal.directory);
+    // deploy needs to:
+    // A) render kubernetes manifests
+    //    - namespace, deployment, service, ingress
+    //    - upgrade ingress config with new listen ports
+    //
+    // B) upload asset files to bucket
+    //
+    // C) update frontend with new state of challenges
+
+    let kube_results = kubernetes::apply_challenge_resources(profile_name, chal).await?;
+
+    let s3_urls = s3::upload_challenge_assets(profile_name, chal, build_result).await?;
+
+    let frontend_info =
+        frontend::update_frontend(profile_name, chal, build_result, &kube_results, &s3_urls)
+            .await?;
+
+    Ok(frontend_info)
 }

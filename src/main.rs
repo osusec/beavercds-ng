@@ -1,6 +1,6 @@
 use beavercds_ng::commands;
 use clap::Parser;
-use tracing::{trace, Level};
+use tracing::{error, trace, Level};
 use tracing_subscriber::{
     fmt::{format::FmtSpan, time},
     EnvFilter,
@@ -38,7 +38,19 @@ fn main() {
         .init();
 
     trace!("args: {:?}", cli);
+
     // dispatch commands
+    match dispatch(cli) {
+        Ok(_) => (),
+        Err(e) => {
+            error!("{e:?}");
+            std::process::exit(1)
+        }
+    };
+}
+
+/// dispatch commands
+fn dispatch(cli: cli::Cli) -> anyhow::Result<()> {
     match &cli.command {
         cli::Commands::Validate => commands::validate::run(),
 
@@ -49,7 +61,7 @@ fn main() {
             registry,
             bucket,
         } => {
-            commands::validate::run();
+            commands::validate::run()?;
             commands::check_access::run(profile, kubernetes, frontend, registry, bucket)
         }
 
@@ -60,7 +72,7 @@ fn main() {
             no_push,
             extract_assets,
         } => {
-            commands::validate::run();
+            commands::validate::run()?;
             commands::build::run(profile, &!no_push, extract_assets)
         }
 
@@ -69,12 +81,13 @@ fn main() {
             no_build,
             dry_run,
         } => {
-            commands::validate::run();
+            commands::validate::run()?;
             commands::deploy::run(profile, no_build, dry_run)
         }
 
         cli::Commands::ClusterSetup { profile } => {
-            commands::cluster_setup::run(profile);
+            commands::validate::run()?;
+            commands::cluster_setup::run(profile)
         }
     }
 }

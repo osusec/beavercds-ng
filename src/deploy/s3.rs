@@ -14,49 +14,53 @@ use crate::configparser::config::ProfileConfig;
 use crate::configparser::{enabled_challenges, get_config, get_profile_config, ChallengeConfig};
 use crate::utils::TryJoinAll;
 
+/// Artifacts and information about a deployed challenges.
+pub struct S3DeployResult {
+    pub uploaded_asset_urls: Vec<String>,
+}
+
 /// Upload files to frontend asset bucket
 /// Returns urls of upload files.
-pub async fn upload_assets(
+pub async fn upload_challenge_assets(
     profile_name: &str,
-    build_results: &[(&ChallengeConfig, BuildResult)],
-) -> Result<Vec<BuildResult>> {
+    chal: &ChallengeConfig,
+    build_result: &BuildResult,
+) -> Result<S3DeployResult> {
     let profile = get_profile_config(profile_name)?;
     let enabled_challenges = enabled_challenges(profile_name)?;
 
     let bucket = bucket_client(&profile.s3)?;
 
-    info!("uploading assets...");
+    info!("uploading assets for chal {:?}...", chal.directory);
 
-    // upload all files for each challenge
-    build_results
+    let uploaded = build_result
+        .assets
         .iter()
-        .map(|(chal, result)| async move {
-            // upload all files for a specific challenge
-
-            info!("  for chal {:?}...", chal.directory);
-
-            let uploaded = result
-                .assets
-                .iter()
-                .map(|asset_file| async move {
-                    upload_single_file(bucket, chal, asset_file)
-                        .await
-                        .with_context(|| format!("failed to upload file {asset_file:?}"))
-                })
-                .try_join_all()
+        .map(|asset_file| async move {
+            debug!("uploading file {:?}", asset_file);
+            // upload to bucket
+            let bucket_path = upload_single_file(bucket, chal, asset_file)
                 .await
-                .with_context(|| {
-                    format!("failed to upload asset files for chal {:?}", chal.directory)
-                })?;
+                .with_context(|| format!("failed to upload file {asset_file:?}"))?;
 
-            // return new BuildResult with assets as bucket path
-            Ok(BuildResult {
-                tags: result.tags.clone(),
-                assets: uploaded,
-            })
+            // return link to the uploaded file
+            // TODO: only works for AWS rn! support other providers
+            let url = format!(
+                "https://{bucket}.s3.{region}.amazonaws.com/{path}",
+                bucket = &profile.s3.bucket_name,
+                region = &profile.s3.region,
+                path = bucket_path.to_string_lossy(),
+            );
+            Ok(url)
         })
         .try_join_all()
         .await
+        .with_context(|| format!("failed to upload asset files for chal {:?}", chal.directory))?;
+
+    // return new BuildResult with assets as bucket path
+    Ok(S3DeployResult {
+        uploaded_asset_urls: uploaded,
+    })
 }
 
 async fn upload_single_file(

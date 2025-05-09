@@ -24,6 +24,7 @@ metadata:
   namespace: "rcds-{{ slug }}"
   annotations:
     app.kubernetes.io/managed-by: rcds
+    cert-manager.io/cluster-issuer: letsencrypt
 spec:
   ingressClassName: beavercds
   rules:
@@ -39,3 +40,10 @@ spec:
               port:
                 number: {{ p.internal }}
   {% endfor -%}
+
+  tls:
+    - hosts:
+      {%- for p in http_ports %}
+        - "{{ p.expose.http }}.{{ domain }}"
+      {% endfor -%}
+      secretName: "rcds-tls-{{ slug }}-{{ pod.name }}"

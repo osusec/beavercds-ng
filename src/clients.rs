@@ -222,7 +222,7 @@ pub async fn apply_manifest_yaml(
     // this manifest has multiple documents (crds, deployment)
     for yaml in multidoc_deserialize(manifest)? {
         let obj: DynamicObject = serde_yml::from_value(yaml)?;
-        debug!(
+        trace!(
             "applying resource {} {}",
             obj.types.clone().unwrap_or_default().kind,
             obj.name_any()
@@ -344,20 +344,4 @@ pub async fn wait_for_status(client: &kube::Client, object: &DynamicObject) -> R
     };
 
     Ok(())
-}
-
-//
-// Minijinja strict rendering with error
-//
-
-/// Similar to minijinja.render!(), but return Error if any undefined values.
-pub fn render_strict(template: &str, context: minijinja::Value) -> Result<String> {
-    let mut strict_env = minijinja::Environment::new();
-    // error on any undefined template variables
-    strict_env.set_undefined_behavior(minijinja::UndefinedBehavior::Strict);
-
-    let r = strict_env
-        .render_str(template, context)
-        .context(format!("could not render template {:?}", template))?;
-    Ok(r)
 }

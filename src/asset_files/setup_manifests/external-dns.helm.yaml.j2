@@ -2,8 +2,6 @@
 rbac:
   create: true
 
-{{ provider_credentials }}
-
 # Watch these resources for new DNS records
 sources:
   - service
@@ -20,10 +18,10 @@ txtOwnerId: "k8s-external-dns"
 txtPrefix: "k8s-owner."
 
 extraArgs:
-  # ignore any services with internal ips
-  #exclude-target-net: "10.0.0.0/8"
   # special character replacement
-  txt-wildcard-replacement: star
+  - --txt-wildcard-replacement=star
+  # use CNAME instead of ALIAS for alb targets
+  - --aws-prefer-cname
 
 ## Limit external-dns resources
 resources:
@@ -34,3 +32,6 @@ resources:
     cpu: 10m
 
 logLevel: debug
+
+# assign last to override any previous values if required
+{{ provider_credentials }}

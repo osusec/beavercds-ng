@@ -12,10 +12,10 @@ use std::str::FromStr;
 use tracing::{debug, error, info, trace, warn};
 use void::Void;
 
-use crate::clients::render_strict;
 use crate::configparser::config::Resource;
 use crate::configparser::field_coersion::string_or_struct;
 use crate::configparser::get_config;
+use crate::utils::render_strict;
 
 pub fn parse_all() -> Result<Vec<ChallengeConfig>, Vec<Error>> {
     // find all challenge.yaml files
@@ -122,7 +122,36 @@ pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
 pub struct ChallengeConfig {
     name: String,
     author: String,
+
+    /// Challenge description, displayed to players on the frontend.
+    /// Supports markdown and Jinja-style templating for challenge info via
+    /// [minijinja](https://docs.rs/minijinja).
+    ///
+    /// The Jinja template fields available are:
+    ///
+    /// | Field name  | Description |
+    /// | ----------- | ----------- |
+    /// | `hostname`  | The hostname or domain for the challenge
+    /// | `port`      | The port that the challenge is listening on
+    /// | `nc`        | Insert the `nc` command to connect to TCP challenges (`nc {{hostname}} {{port}}`)
+    /// | `link`      | Create a Markdown link to the exposed hostname/port
+    /// | `url`       | The URL from `link` without the accompanying Markdown
+    /// | `challenge` | The full challenge.yaml config for this challenge, with subfields
+    ///
+    /// Example:
+    ///
+    /// ```yaml
+    /// description: |
+    ///     Some example challenge. Blah blah blah flavor text.
+    ///
+    ///     In case you missed it, this was written by {{ challenge.author }}
+    ///     and is called {{ challenge.name }}.
+    ///
+    ///     {{ link }}    # -becomes-> [example.chals.thectf.com](https://example.chals.thectf.com)
+    ///     {{ nc }}      # -becomes-> `nc example.chals.thectf.com 12345`
+    /// ```
     description: String,
+
     category: String,
 
     directory: PathBuf,
@@ -175,6 +204,17 @@ impl ChallengeConfig {
     /// Create challenge category/name slug from directory path, with category slash
     pub fn slugify_slash(&self) -> String {
         self.directory
+            .to_string_lossy()
+            .to_lowercase()
+            .split_whitespace()
+            .join("-")
+    }
+
+    /// Create challenge name slug from directory path (without category)
+    pub fn slugify_name(&self) -> String {
+        self.directory
+            .file_name()
+            .unwrap()
             .to_string_lossy()
             .to_lowercase()
             .split_whitespace()
@@ -276,10 +316,16 @@ struct Pod {
     #[serde(default)]
     env: ListOrMap,
 
+    #[serde(default = "default_architecture")]
+    architecture: String,
+
     resources: Option<Resource>,
     replicas: i64,
     ports: Vec<PortConfig>,
     volume: Option<String>,
+}
+fn default_architecture() -> String {
+    "amd64".to_string()
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

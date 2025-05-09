@@ -4,15 +4,15 @@ metadata:
   name: letsencrypt
 spec:
   acme:
-    server: https://acme-v02.api.letsencrypt.org/directory"
+    server: https://acme-v02.api.letsencrypt.org/directory
     # TODO: use user email?
-    email: beavercds-prod@example.com
+    email: beavercds-prod@{{ chal_domain }}
     privateKeySecretRef:
       name: letsencrypt-secret
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: beavercds
 
 ---
 apiVersion: cert-manager.io/v1
@@ -23,10 +23,10 @@ spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
     # TODO: use user email?
-    email: beavercds-staging@example.com
+    email: beavercds-staging@{{ chal_domain }}
     privateKeySecretRef:
       name: letsencrypt-staging-secret
     solvers:
     - http01:
         ingress:
-          class: nginx
+          ingressClassName: beavercds

@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use futures::{future::try_join_all, TryFuture};
 
 /// Helper trait for `Iterator` to add futures::try_await_all() as chain method.
@@ -25,4 +26,20 @@ where
     ) -> Result<Vec<<Self::Item as TryFuture>::Ok>, <Self::Item as TryFuture>::Error> {
         try_join_all(self).await
     }
+}
+
+//
+// Minijinja strict rendering with error
+//
+
+/// Similar to minijinja.render!(), but return Error if any undefined values.
+pub fn render_strict(template: &str, context: minijinja::Value) -> Result<String> {
+    let mut strict_env = minijinja::Environment::new();
+    // error on any undefined template variables
+    strict_env.set_undefined_behavior(minijinja::UndefinedBehavior::Strict);
+
+    let r = strict_env
+        .render_str(template, context)
+        .context(format!("could not render template {:?}", template))?;
+    Ok(r)
 }
