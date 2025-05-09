@@ -55,8 +55,17 @@ pub async fn build_image(
         .with_context(|| "could not create image context tarball")?;
     let tarball = tar.into_inner()?;
 
+    let credentials = bollard::auth::DockerCredentials {
+        username: Some("detjensrobert".to_string()),
+        password: Some("60989d59-d225-4b83-852a-9896099cb300".to_string()),
+        ..Default::default()
+    };
+
+    let mut creds_hsh = std::collections::HashMap::new();
+    creds_hsh.insert("docker.io".to_string(), credentials);
+
     // send to docker daemon
-    let mut build_stream = client.build_image(build_opts, None, Some(tarball.into()));
+    let mut build_stream = client.build_image(build_opts, Some(creds_hsh), Some(tarball.into()));
 
     // stream output to stdout
     while let Some(item) = build_stream.next().await {
