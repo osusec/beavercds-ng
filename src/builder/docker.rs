@@ -20,7 +20,7 @@ use tempfile::Builder;
 use tokio;
 use tracing::{debug, error, info, trace, warn};
 
-use crate::clients::docker;
+use crate::clients::{docker, docker_creds};
 use crate::configparser::challenge::BuildObject;
 use crate::configparser::UserPass;
 
@@ -55,17 +55,12 @@ pub async fn build_image(
         .with_context(|| "could not create image context tarball")?;
     let tarball = tar.into_inner()?;
 
-    let credentials = bollard::auth::DockerCredentials {
-        username: Some("detjensrobert".to_string()),
-        password: Some("60989d59-d225-4b83-852a-9896099cb300".to_string()),
-        ..Default::default()
-    };
-
-    let mut creds_hsh = std::collections::HashMap::new();
-    creds_hsh.insert("docker.io".to_string(), credentials);
+    // fetch dockerhub creds from ~/.docker/auth.json for pull reasons
+    // if creds fail to fetch, go anonymous
+    let credentials = docker_creds()?;
 
     // send to docker daemon
-    let mut build_stream = client.build_image(build_opts, Some(creds_hsh), Some(tarball.into()));
+    let mut build_stream = client.build_image(build_opts, Some(credentials), Some(tarball.into()));
 
     // stream output to stdout
     while let Some(item) = build_stream.next().await {

@@ -1,15 +1,10 @@
 // Builders for the various client structs for Docker/Kube etc.
 
-use std::sync::OnceLock;
+use std::{collections::HashMap, sync::OnceLock};
 
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use bollard;
-use futures::TryFutureExt;
-use k8s_openapi::api::{
-    apps::v1::Deployment,
-    core::v1::{Pod, Service},
-    networking::v1::Ingress,
-};
+use k8s_openapi::api::core::v1::Service;
 use kube::{
     self,
     api::{DynamicObject, GroupVersionKind, Patch, PatchParams},
@@ -47,6 +42,93 @@ pub async fn docker() -> Result<&'static bollard::Docker> {
         }
     }
 }
+
+/// Fetch registry login credentials from ~/.docker/config.json or $DOCKER_CONFIG
+///
+/// For now, this is only `docker.io` credentials, as it is the only registry
+/// that effectively requires auth for public images. We don't intend for
+/// challenge images to be built from private images.
+///
+/// If lookup fails, return empty hashmap as anonymous user.
+pub fn docker_creds() -> Result<HashMap<String, bollard::auth::DockerCredentials>> {
+    let cred_r = docker_credential::get_credential("docker.io");
+
+    let cred = match cred_r {
+        Ok(cred) => cred,
+        Err(e) => {
+            // dont die if the credentials could not be found. Warn and continue as anonymous
+            warn!("could not fetch docker.io registry credentials from Docker config (are you logged in?)");
+            // log full error for debug
+            trace!("credentials error: {e:?}");
+
+            warn!("continuing as with anonymous build credentials");
+            return Ok(HashMap::new());
+        }
+    };
+
+    // convert docker_credential enum to bollad
+    let converted = match cred {
+        docker_credential::DockerCredential::IdentityToken(token) => {
+            bollard::auth::DockerCredentials {
+                identitytoken: Some(token),
+                ..Default::default()
+            }
+        }
+        docker_credential::DockerCredential::UsernamePassword(u, p) => {
+            bollard::auth::DockerCredentials {
+                username: Some(u),
+                password: Some(p),
+                ..Default::default()
+            }
+        }
+    };
+
+    Ok(std::collections::HashMap::from([(
+        "docker.io".to_string(),
+        converted,
+    )]))
+}
+
+// /// wip to pull all docker creds from json
+// pub async fn all_docker_creds() -> Result<HashMap<String, bollard::auth::DockerCredentials>> {
+//     let auth_path = dirs::home_dir()
+//         .expect("could not fetch homedir")
+//         .join(".docker")
+//         .join("config.json");
+//     let auth_file = File::open(auth_path).context("could not read docker auth config.json")?;
+//     // json is technically yaml so use the dependency we already bring in
+//     let auth_json: serde_yml::Value = serde_yml::from_reader(auth_file).unwrap();
+
+//     let mut map = HashMap::new();
+//     for (raw_reg, _raw_auth) in auth_json.get("auths").unwrap().as_mapping().unwrap() {
+//         let reg = raw_reg.as_str().unwrap();
+//         let cred = match engine_type().await {
+//             EngineType::Docker => docker_credential::get_credential(reg),
+//             EngineType::Podman => docker_credential::get_podman_credential(reg),
+//         }
+//         .context("could not fetch Docker registry credentials from Docker config")?;
+
+//         let creds = match cred {
+//             docker_credential::DockerCredential::IdentityToken(token) => {
+//                 bollard::auth::DockerCredentials {
+//                     identitytoken: Some(token),
+//                     ..Default::default()
+//                 }
+//             }
+//             docker_credential::DockerCredential::UsernamePassword(u, p) => {
+//                 bollard::auth::DockerCredentials {
+//                     username: Some(u),
+//                     password: Some(p),
+//                     ..Default::default()
+//                 }
+//             }
+//         };
+
+//         map.insert(reg.to_string(), creds);
+//     }
+
+//     Ok(map)
+// }
 
 #[derive(Debug)]
 pub enum EngineType {
