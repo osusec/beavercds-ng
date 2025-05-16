@@ -22,6 +22,7 @@ use tracing::{debug, error, info, trace, warn};
 
 use crate::clients::{apply_manifest_yaml, kube_client};
 use crate::configparser::{config, get_config, get_profile_config};
+use crate::utils::render_strict;
 
 // Deploy cluster resources needed for challenges to work.
 //
@@ -40,7 +41,8 @@ pub async fn install_ingress(profile: &config::ProfileConfig) -> Result<()> {
     install_helm_chart(
         profile,
         "ingress-nginx",
-        Some("https://kubernetes.github.io/ingress-nginx"),
+        "https://kubernetes.github.io/ingress-nginx",
+        None,
         "ingress-nginx",
         INGRESS_NAMESPACE,
         VALUES,
@@ -57,7 +59,8 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     install_helm_chart(
         profile,
         "cert-manager",
-        Some("https://charts.jetstack.io"),
+        "https://charts.jetstack.io",
+        None,
         "cert-manager",
         INGRESS_NAMESPACE,
         VALUES,
@@ -67,9 +70,17 @@ pub async fn install_certmanager(profile: &config::ProfileConfig) -> Result<()> 
     let client = kube_client(profile).await?;
 
     // letsencrypt and letsencrypt-staging
-    const ISSUERS_YAML: &str =
+    const ISSUERS_TEMPLATE: &str =
         include_str!("../asset_files/setup_manifests/letsencrypt.issuers.yaml");
-    apply_manifest_yaml(&client, ISSUERS_YAML).await?;
+
+    let issuers_yaml = render_strict(
+        ISSUERS_TEMPLATE,
+        minijinja::context! {
+            chal_domain => profile.challenges_domain
+        },
+    )?;
+
+    apply_manifest_yaml(&client, &issuers_yaml).await?;
 
     Ok(())
 }
@@ -81,16 +92,20 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
         include_str!("../asset_files/setup_manifests/external-dns.helm.yaml.j2");
 
     // add profile dns: field directly to chart values
-    let values = minijinja::render!(
+    let values = render_strict(
         VALUES_TEMPLATE,
-        provider_credentials => serde_yml::to_string(&profile.dns)?,
-        chal_domain => profile.challenges_domain
-    );
+        minijinja::context! {
+            provider_credentials => serde_yml::to_string(&profile.dns)?,
+            chal_domain => profile.challenges_domain
+        },
+    )?;
+
     trace!("deploying templated external-dns values:\n{}", values);
 
     install_helm_chart(
         profile,
-        "oci://registry-1.docker.io/bitnamicharts/external-dns",
+        "external-dns",
+        "https://kubernetes-sigs.github.io/external-dns",
         None,
         "external-dns",
         INGRESS_NAMESPACE,
@@ -106,11 +121,17 @@ pub async fn install_extdns(profile: &config::ProfileConfig) -> Result<()> {
 fn install_helm_chart(
     profile: &config::ProfileConfig,
     chart: &str,
-    repo: Option<&str>,
+    repo: &str,
+    version: Option<&str>,
     release_name: &str,
     namespace: &str,
     values: &str,
 ) -> Result<()> {
+    // make sure `helm` is available to run
+    duct::cmd!("helm", "version")
+        .read()
+        .context("helm binary is not available")?;
+
     // write values to tempfile
     let mut temp_values = tempfile::Builder::new()
         .prefix(release_name)
@@ -118,8 +139,8 @@ fn install_helm_chart(
         .tempfile()?;
     temp_values.write_all(values.as_bytes())?;
 
-    let repo_arg = match repo {
-        Some(r) => format!("--repo {r}"),
+    let version_arg = match version {
+        Some(v) => format!("--version {v}"),
         None => "".to_string(),
     };
 
@@ -134,7 +155,7 @@ fn install_helm_chart(
         r#"
         upgrade --install
             {release_name}
-            {chart} {repo_arg}
+            {chart} --repo {repo} {version_arg}
             --namespace {namespace} --create-namespace
             --values {}
             --wait --timeout 1m

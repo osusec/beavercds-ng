@@ -10,8 +10,8 @@ use minijinja;
 use tokio;
 use tracing::{debug, error, info, trace, warn};
 
-use crate::clients::{docker, render_strict};
 use crate::configparser::{get_config, get_profile_config};
+use crate::{clients::docker, utils::render_strict};
 
 /// container registry / daemon access checks
 #[tokio::main(flavor = "current_thread")] // make this a sync function

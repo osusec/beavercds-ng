@@ -80,7 +80,7 @@ async fn build_challenge(
                 Build(build) => {
                     let tag = chal.container_tag_for_pod(profile_name, &p.name)?;
 
-                    let res = docker::build_image(&chal.directory, build, &tag)
+                    let res = docker::build_image(&chal.directory, build, &tag, &p.architecture)
                         .await
                         .with_context(|| {
                             format!(

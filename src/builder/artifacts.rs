@@ -38,7 +38,7 @@ pub async fn extract_asset(
 
     let docker = docker().await?;
 
-    match provide {
+    let extracted_files = match provide {
         // Repo file paths are relative to the challenge directory, so prepend chal dir
 
         // No action necessary, return path as-is
@@ -54,12 +54,13 @@ pub async fn extract_asset(
             files,
             archive_name,
         } => {
+            let archive_path = chal.directory.join(archive_name);
             zip_files(
-                &chal.directory.join(archive_name),
+                &archive_path,
                 &files.iter().map(|f| chal.directory.join(f)).collect_vec(),
             )
             .with_context(|| format!("could not create archive {archive_name:?}"))?;
-            Ok(vec![archive_name.clone()])
+            Ok(vec![archive_path])
         }
 
         // handle all container events together to manage container, then match again
@@ -132,7 +133,18 @@ pub async fn extract_asset(
 
             files
         }
+    }?;
+
+    // assert all files have chal dir prepended
+    for path in &extracted_files {
+        assert!(
+            path.starts_with(&chal.directory),
+            "extracted path {path:?} for {:?} is missing challenge directory!",
+            &chal.directory
+        )
     }
+
+    Ok(extracted_files)
 }
 
 /// Extract multiple files from container
