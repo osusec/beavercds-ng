@@ -39,7 +39,10 @@ pub async fn build_image(
     let client = docker().await?;
 
     let build_opts = BuildImageOptions {
-        dockerfile: options.dockerfile.clone(),
+        dockerfile: context
+            .join(&options.dockerfile)
+            .to_string_lossy()
+            .into_owned(), // coerce Cow str to String explicitly
         buildargs: options.args.clone(),
         t: tag.to_string(),
         forcerm: true,
