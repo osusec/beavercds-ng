@@ -1,6 +1,9 @@
-# How to write beaverCDS challenge.yaml config
+# Challenge Config Quickstart
 
-tldr: see [the TCP example](#full-tcp-example) or [the web example](#full-http-example).
+All information about a challenge is configured in a `challenge.yaml` in the
+challenge's directory in the repo, generally `<category>/<name>`.
+
+For a tldr: see a full example for  [a TCP/`nc` challenge](#full-tcp-example) or [a web challenge](#full-http-example).
 
 ### Metadata
 
@@ -112,15 +115,15 @@ provide:
   # file from the challenge folder in the repo
   - somefile.txt
 
-  # multiple files from chal_folder/src/, zipped as together.zip
+  # multiple files from src/ in the challenge folder, zipped as together.zip
   - as: together.zip
     include:
       - src/file1
       - src/file2
       - src/file3
 
-  # extract these files from inside of the container image
-  # for the `main` pod (see previous section)
+  # multiple files pulled from the container image for the `main` pod
+  # (see previous Pods section)
   - from: main
     include:
       - /chal/notsh
