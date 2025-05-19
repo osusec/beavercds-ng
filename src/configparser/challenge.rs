@@ -74,9 +74,11 @@ pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
         .merge(Serialized::default("category", category))
         .extract()?;
 
-    // coerce pod env lists to maps
-    // TODO: do this in serde deserialize?
+    let config = get_config()?;
+
     for pod in parsed.pods.iter_mut() {
+        // coerce pod env lists to maps
+        // TODO: do this in serde deserialize?
         pod.env = match pod.env.clone() {
             ListOrMap::Map(m) => ListOrMap::Map(m),
             ListOrMap::List(l) => {
@@ -104,6 +106,11 @@ pub fn parse_one(path: &PathBuf) -> Result<ChallengeConfig> {
                     });
                 ListOrMap::Map(map)
             }
+        };
+
+        // set default resources from global config
+        if pod.resources.is_none() {
+            pod.resources = Some(config.defaults.resources.clone())
         }
     }
 

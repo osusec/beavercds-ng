@@ -111,7 +111,7 @@ struct UserPass {
     pass: String,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 #[fully_pub]
 struct Resource {
     cpu: i64,
