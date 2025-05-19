@@ -75,7 +75,7 @@ pub async fn update_frontend(
                 .read_to_string(&mut flag);
             flag
         }
-        FlagType::Text { text } => text.clone(),
+        FlagType::String { string: text } => text.clone(),
         FlagType::Regex { regex } => unimplemented!(),
         FlagType::Verifier { verifier } => unimplemented!(),
     };

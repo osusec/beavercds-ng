@@ -88,8 +88,8 @@ fn challenge_two_levels() {
                 category: "foo".to_string(),
                 directory: PathBuf::from("foo/test"),
 
-                flag: FlagType::Text {
-                    text: "test{it-works}".to_string()
+                flag: FlagType::String {
+                    string: "test{it-works}".to_string()
                 },
 
                 provide: vec![],

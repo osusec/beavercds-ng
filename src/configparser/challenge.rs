@@ -231,10 +231,19 @@ fn default_difficulty() -> i64 {
 #[fully_pub]
 enum FlagType {
     RawString(String),
-    File { file: PathBuf },
-    Text { text: String },
-    Regex { regex: String },
-    Verifier { verifier: String },
+    File {
+        file: PathBuf,
+    },
+    String {
+        #[serde(alias = "text")]
+        string: String,
+    },
+    Regex {
+        regex: String,
+    },
+    Verifier {
+        verifier: String,
+    },
 }
 
 // Parse each distinct kind of Provide action as a separate enum variant
