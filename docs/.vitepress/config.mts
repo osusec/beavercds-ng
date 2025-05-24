@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { generateSidebar } from "vitepress-sidebar";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
@@ -11,35 +12,18 @@ export default defineConfig({
       // { text: "Examples", link: "/markdown-examples" },
     ],
 
-    sidebar: [
-      {
-        text: "Guides",
-        items: [
-          { text: "Deployment Quickstart", link: "for-sysadmins/quickstart" },
-          { text: "Add new challenge", link: "for-authors/quickstart" },
-        ],
-      },
-
-      {
-        text: "Infra Setup",
-        items: [
-          { text: "Quickstart", link: "/for-sysadmins/quickstart" },
-          { text: "Install", link: "/for-sysadmins/quickstart" },
-          { text: "Config Reference", link: "/for-sysadmins/config" },
-          { text: "Architecture", link: "/for-sysadmins/architecture" },
-        ],
-      },
-      {
-        text: "For Authors",
-        items: [
-          { text: "Challenge Quickstart", link: "/for-authors/quickstart" },
-          {
-            text: "Challenge Config Reference",
-            link: "/for-authors/challenge-config",
-          },
-        ],
-      },
-    ],
+    // auto generate sidebar from directory structure, via vitepress-sidebar
+    sidebar: generateSidebar({
+      documentRootPath: "./",
+      // pull title from markdown not filename
+      useTitleFromFileHeading: true,
+      useTitleFromFrontmatter: true,
+      keepMarkdownSyntaxFromTitle: true,
+      // transform name to sentence case
+      hyphenToSpace: true,
+      underscoreToSpace: true,
+      capitalizeEachWords: true,
+    }),
 
     socialLinks: [
       { icon: "github", link: "https://github.com/osusec/beavercds-ng" },
