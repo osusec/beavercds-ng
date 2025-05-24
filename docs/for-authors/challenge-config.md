@@ -254,4 +254,14 @@ Default is 2 and this is probably fine unless the challenge is very resource int
 
 ### `.ports`
 
+Specfies how to expose this pod to players, either as a raw TCP port or HTTP at a specific domain.
+
+#### `.ports.internal`
+
+What the container itself is listening on
+
+#### `.ports.expose`
+
+How to expose the internal container port
+
 ### `.volume`
