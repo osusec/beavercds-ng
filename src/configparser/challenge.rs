@@ -262,6 +262,10 @@ enum ProvideConfig {
     /// Upload file(s) as-is.
     /// Single or multiple files with no as: or from:
     /// Default if only a string is given.
+    FromRepoSingle {
+        #[serde(rename = "include")]
+        file: PathBuf,
+    },
     FromRepo {
         #[serde(rename = "include")]
         files: Vec<PathBuf>,
@@ -315,8 +319,8 @@ enum ProvideConfig {
 impl FromStr for ProvideConfig {
     type Err = Void;
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(ProvideConfig::FromRepo {
-            files: vec![PathBuf::from(s)],
+        Ok(ProvideConfig::FromRepoSingle {
+            file: PathBuf::from(s),
         })
     }
 }

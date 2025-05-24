@@ -42,6 +42,8 @@ pub async fn extract_asset(
         // Repo file paths are relative to the challenge directory, so prepend chal dir
 
         // No action necessary, return path as-is
+        ProvideConfig::FromRepoSingle { file } => Ok(vec![chal.directory.join(file)]),
+        // No action necessary, return path as-is
         ProvideConfig::FromRepo { files } => {
             Ok(files.iter().map(|f| chal.directory.join(f)).collect_vec())
         }
