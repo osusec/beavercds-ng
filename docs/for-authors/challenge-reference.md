@@ -1,4 +1,6 @@
-# `challenge.yaml` Reference
+# Challenge Config Reference
+
+Challenge configuration is expected to be at `<category>/<name>/challenge.yaml`.
 
 [[toc]]
 
@@ -28,14 +30,16 @@ author: Alice, Bob, and others
 
 Description and flavortext for the challenge, as shown to players in the frontend UI. Supports templating to include information about the challenge, such as the link or command to connect.
 
-| Available fields | Description                                                                                                    |
-| ---------------- | -------------------------------------------------------------------------------------------------------------- |
-| `domain`         | The domain/hostname the challenge is listening on <br> (`<subdomain>.chals.example.ctf`)                       |
-| `port`           | The port that the challenge is listening on                                                                    |
-| `nc`             | The `nc` command to connect to TCP challenges, with Markdown backticks <br> (`` `nc {{domain}} {{port}}` ``)   |
-| `url`            | The URL to the exposed web domain for web challenges, plus port if needed <br> (`https://{{domain}}:{{port}}`) |
-| `link`           | Create a Markdown link to `url`                                                                                |
-| `challenge`      | The full challenge.yaml config object for this challenge, with subfields                                       |
+Most challenges only need `{{ nc }}` or `{{ link }}`.
+
+| Available fields | Description                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `domain`         | Full domain the challenge is exposed at, e.g. `<subdomain>.chals.example.ctf`                                            |
+| `port`           | Port the challenge is listening on                                                                                       |
+| `nc`             | `nc` command to connect to TCP challenges, with Markdown backticks <br> (equivalent to `` `nc {{domain}} {{port}}` ``)   |
+| `url`            | URL to the exposed web domain for web challenges, plus port if needed <br> (equivalent to `https://{{domain}}:{{port}}`) |
+| `link`           | Markdown link to `url`                                                                                                   |
+| `challenge`      | The full challenge.yaml config object for this challenge, with subfields                                                 |
 
 ```yaml
 description: |
@@ -44,8 +48,8 @@ description: |
   In case you missed it, this was written by {{ challenge.author }}
   and is called {{ challenge.name }}.
 
-  {{ link }}    # -becomes-> [https://somechal.chals.example.ctf](https://somechal.chals.example.ctf)
-  {{ nc }}      # -becomes-> `nc somechal.chals.example.ctf 12345`
+  {{ nc }}      # `nc somechal.chals.example.ctf 12345`
+  {{ link }}    # [https://somechal.chals.example.ctf](https://somechal.chals.example.ctf)
 ```
 
 ## `category`
@@ -53,7 +57,7 @@ description: |
 The category for the challenge.
 
 ::: warning
-Automatically set! This is set from the expected directory structure of `<category>/<challenge>/challenge.yaml` and overwrites whatever is set in the file.
+This is set from the expected directory structure of `<category>/<challenge>/challenge.yaml` and will overwrite whatever is set in the file.
 :::
 
 ## `difficulty`
@@ -62,7 +66,7 @@ Automatically set! This is set from the expected directory structure of `<catego
 Not implemented yet, does nothing
 :::
 
-The difficulty from the challenge, used to set point values. Values correspond to entries in the [rcds.yaml difficulty settings](/for-sysadmins/config#difficulty).
+The difficulty from the challenge, used to set point values. Values correspond to entries in the [rcds.yaml difficulty settings](../for-sysadmins/config#difficulty).
 
 ```yaml
 difficulty: 1 # the current default
@@ -73,18 +77,16 @@ difficulty: 1 # the current default
 Where to find the flag for the challenge. The flag can be in a file, a regex, or a direct string.
 
 ```yaml
-# directly set (equivalent)
+# directly set
 flag: ctf{example-flag}
-flag:
-  string: ctf{example-flag}
 
 # from a file in in the challenge directory
 flag:
-  file: flag
+  file: ./flag
 
 # regex
 flag:
-  regex: /ctf\{(foo|bar|baz+)\}/
+  regex: /ctf\{(foo|bar|ba[xyz])\}/
 ```
 
 ::: info
@@ -103,7 +105,12 @@ provide:
   - somefile.txt
   - otherfile.txt
 
-  # rename a really long name as something shorter during upload
+  # these are all equivalent
+  - foo.txt
+  - include: foo.txt
+  - include: [ foo.txt ]
+
+  # rename a really long name as something shorter for upload
   - as: short.h
     include: some_really_long_name.h
 
@@ -145,9 +152,12 @@ File or list of files to upload individually, or include in a zip if `as` is set
 
 When uploading, only the basename is used and the path to the file is discarded.
 
+If a provide item is specified as a single string, it is interpreted as an `include:`.
+
 ### `.as`
 
-If `include` is a single file, rename to the given name while uploading.
+If `.include` is a single file, rename to this name while uploading.
+
 If multiple files, zip them together into the given zip file.
 
 ### `.from`
@@ -223,8 +233,8 @@ Conflicts with [`build`](#build).
 Any environment variables to set for the running pod. Specify as `name: value`.
 
 ```yaml
-    env:
-      SOME_ENVVAR: foo bar
+env:
+  SOME_ENVVAR: foo bar
 ```
 
 ### `.architecture`
@@ -240,7 +250,7 @@ Set the desired CPU architecture to run this pod on.
 
 The resource usage request and limits for the pod. Kubernetes will make sure the requested resources will be available for this pod to use, and will also restart the pod if it goes over these limits.
 
-If not set, the default set in [`rcds.yaml`](config#rcds.yaml) is used.
+If not set, the default set in [`rcds.yaml`](../for-sysadmins/config#rcds.yaml) is used.
 
 ### `.replicas`
 
@@ -249,7 +259,7 @@ How many instances of the pod to run. Traffic is load-balanced between instances
 Default is 2 and this is probably fine unless the challenge is very resource intensive.
 
 ```yaml
-    replicas: 2   # the default
+replicas: 2 # the default
 ```
 
 ### `.ports`
@@ -258,7 +268,7 @@ Specfies how to expose this pod to players, either as a raw TCP port or HTTP at 
 
 #### `.ports.internal`
 
-What the container itself is listening on
+The port the container is listening on; i.e. `xinetd` or `nginx` etc.
 
 #### `.ports.expose`
 

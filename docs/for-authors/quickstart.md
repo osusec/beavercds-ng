@@ -57,8 +57,7 @@ flag:
 
 Defines how any container images for this challenge are built and deployed.
 
-The pod `name` is also used for extracting files, see [Providing files to
-users](<for-challenge-authors#Providing files to users>).
+The pod `name` is also used for extracting files, see [Providing files to users](#Providing files to users).
 
 `build` works similar to [Docker Compose](https://docs.docker.com/reference/compose-file/build/#illustrative-example),
 either:
