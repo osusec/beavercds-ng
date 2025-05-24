@@ -5,26 +5,28 @@ layout: home
 hero:
   name: "beaverCDS"
   text: "The next-generation CTF deployment framework"
-  tagline: "Challenges made simple."
+  tagline: "Challenge management made simple."
   actions:
     - theme: brand
       text: Get started
-      link: /getting-started
+      link: /for-sysadmins/quickstart
     - theme: alt
-      text: Writing challenges
+      text: Add a challenge
       link: /for-authors/quickstart
 
 features:
-  - title: Deploy
+  - title: Quick setup
     icon: 🚀
-    details: Set up a new deployment on a fresh cluster
+    details: beaverCDS can get you from a fresh cluster to ready for challenges in minutes.
     link: /for-sysadmins/quickstart
-  - title: Configure
+
+  - title: Control Challenge Deployment
     icon: ⚙️
-    details: All about the global `rcds.yaml` config
+    details: Quickly enable or disable challenges to control exactly what is live for players.
     link: /for-sysadmins/config
-  - title: Add challenge
+
+  - title: Simple yet flexible
     icon: ✏️
-    details: For challenge authors, how to add a new challenge
+    details: Adding a new challenge is simpler than ever.
     link: /for-authors/quickstart
 ---
